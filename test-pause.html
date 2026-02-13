@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pause Functionality Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-case { margin: 10px 0; padding: 10px; border: 1px solid #ccc; }
+        .pass { background-color: #d4edda; border-color: #c3e6cb; }
+        .fail { background-color: #f8d7da; border-color: #f5c6cb; }
+        button { padding: 10px 20px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Pause Menu Functionality Test</h1>
+    
+    <div class="test-case">
+        <h3>Test 1: HTML Elements Exist</h3>
+        <div id="test1-result"></div>
+    </div>
+    
+    <div class="test-case">
+        <h3>Test 2: CSS Styling Applied</h3>
+        <div id="test2-result"></div>
+    </div>
+    
+    <div class="test-case">
+        <h3>Test 3: JavaScript Functions Exist</h3>
+        <div id="test3-result"></div>
+    </div>
+    
+    <button onclick="runTests()">Run Tests</button>
+    <button onclick="openGame()">Open Game</button>
+    
+    <script>
+        function runTests() {
+            // Test 1: Check HTML elements
+            const pauseBtn = document.getElementById('pauseBtn');
+            const pauseMenu = document.getElementById('pauseMenu');
+            const resumeBtn = document.getElementById('resumeBtn');
+            
+            const test1 = document.getElementById('test1-result');
+            if (pauseBtn && pauseMenu && resumeBtn) {
+                test1.innerHTML = '✓ PASS: All pause HTML elements found';
+                test1.parentElement.className = 'test-case pass';
+            } else {
+                test1.innerHTML = '✗ FAIL: Missing HTML elements';
+                test1.parentElement.className = 'test-case fail';
+            }
+            
+            // Test 2: Check CSS styling
+            fetch('style.css')
+                .then(response => response.text())
+                .then(css => {
+                    const test2 = document.getElementById('test2-result');
+                    if (css.includes('#pauseBtn') && css.includes('#pauseMenu') && css.includes('.pause-content')) {
+                        test2.innerHTML = '✓ PASS: All pause CSS styles found';
+                        test2.parentElement.className = 'test-case pass';
+                    } else {
+                        test2.innerHTML = '✗ FAIL: Missing CSS styles';
+                        test2.parentElement.className = 'test-case fail';
+                    }
+                });
+            
+            // Test 3: Check JavaScript functions
+            fetch('game.js')
+                .then(response => response.text())
+                .then(js => {
+                    const test3 = document.getElementById('test3-result');
+                    if (js.includes('function pauseGame') && js.includes('function resumeGame') && js.includes('let isPaused')) {
+                        test3.innerHTML = '✓ PASS: All pause JavaScript functions found';
+                        test3.parentElement.className = 'test-case pass';
+                    } else {
+                        test3.innerHTML = '✗ FAIL: Missing JavaScript functions';
+                        test3.parentElement.className = 'test-case fail';
+                    }
+                });
+        }
+        
+        function openGame() {
+            window.open('index.html', '_blank');
+        }
+    </script>
+</body>
+</html>

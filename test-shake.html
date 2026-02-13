@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Screen Shake Test</title>
+</head>
+<body>
+    <h1>Screen Shake System Test</h1>
+    <p>Open the browser console to test the screen shake functions:</p>
+    <ul>
+        <li>triggerScreenShake(5, 10) - Medium shake</li>
+        <li>triggerScreenShake(15, 15) - Heavy shake</li>
+        <li>createDamageNumber(100, 100, 10) - Create damage number</li>
+    </ul>
+    
+    <script>
+        // Screen shake system
+        let screenShake = {
+            intensity: 0,
+            duration: 0,
+            decay: 0.9
+        };
+
+        function triggerScreenShake(intensity, duration) {
+            screenShake.intensity = intensity;
+            screenShake.duration = duration;
+            console.log(`Screen shake triggered: intensity=${intensity}, duration=${duration}`);
+        }
+
+        // Damage numbers
+        let damageNumbers = [];
+
+        function createDamageNumber(x, y, damage) {
+            damageNumbers.push({
+                x: x,
+                y: y,
+                damage: damage,
+                life: 1,
+                vy: -2
+            });
+            console.log(`Damage number created: x=${x}, y=${y}, damage=${damage}`);
+        }
+
+        // Make functions globally available for testing
+        window.triggerScreenShake = triggerScreenShake;
+        window.createDamageNumber = createDamageNumber;
+        window.screenShake = screenShake;
+        window.damageNumbers = damageNumbers;
+    </script>
+</body>
+</html>

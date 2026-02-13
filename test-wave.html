@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Wave System Test</title>
+</head>
+<body>
+    <h1>Wave System Debug Test</h1>
+    <div id="output"></div>
+    
+    <script>
+        // Simulate wave system logic
+        let currentWave = 1;
+        let enemiesRemaining = 10; // Start with 10 enemies
+        let waveEnemiesToKill = 10;
+        let isWaveComplete = false;
+        
+        function simulateKill() {
+            console.log(`Before kill: Wave ${currentWave}, Enemies Remaining: ${enemiesRemaining}`);
+            
+            enemiesRemaining--;
+            
+            console.log(`After kill: Enemies Remaining: ${enemiesRemaining}`);
+            
+            if (enemiesRemaining <= 0 && !isWaveComplete) {
+                isWaveComplete = true;
+                console.log(`Wave ${currentWave} complete!`);
+                
+                // Simulate wave advancement
+                setTimeout(() => {
+                    currentWave++;
+                    waveEnemiesToKill = 10 + (currentWave - 1) * 5;
+                    enemiesRemaining = waveEnemiesToKill;
+                    isWaveComplete = false;
+                    console.log(`Starting Wave ${currentWave} with ${enemiesRemaining} enemies`);
+                }, 1000);
+            }
+        }
+        
+        // Simulate killing all enemies in wave 1
+        console.log("Starting simulation...");
+        for (let i = 0; i < 10; i++) {
+            simulateKill();
+        }
+    </script>
+</body>
+</html>

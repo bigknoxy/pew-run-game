@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, height=device-height, viewport-fit=cover">
+    <title>Pew Run</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/icons/icon-192.svg">
+    
+    <!-- iOS App Icons (multiple sizes) -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180.svg">
+    <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152.svg">
+    <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-167.svg">
+    <link rel="apple-touch-icon" sizes="120x120" href="/icons/icon-120.svg">
+    <link rel="apple-touch-icon-precomposed" sizes="180x180" href="/icons/icon-180.svg">
+    
+    <!-- Android Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- iOS Splash Screen -->
+    <link rel="apple-touch-startup-image" href="/icons/splash.svg">
+    
+    <!-- Theme Color -->
+    <meta name="theme-color" content="#4ecdc4">
+    
+    <link rel="stylesheet" href="style.css?v=4">
+</head>
+<body>
+<!-- Splash Screen -->
+<div id="splashScreen" onclick="dismissSplashDirect()">
+    <div class="splash-content">
+        <h1 class="splash-title">PEW RUN</h1>
+        <p class="splash-version">Version 1.0</p>
+        <div class="splash-loading">
+            <div class="loading-bar">
+                <div class="loading-progress"></div>
+            </div>
+        </div>
+        <p class="splash-tap">Tap to Start</p>
+    </div>
+</div>
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div id="ui">
+            <div id="score">Score: <span id="scoreValue">0</span></div>
+            <div id="health">Health: <span id="healthValue">100</span></div>
+            <div id="ammo">Ammo: <span id="ammoValue">30</span></div>
+            <div id="gems">💎 <span id="gemsValue">0</span></div>
+        </div>
+        <!-- Add wave display -->
+            <div id="waveUI">
+            <span>WAVE: </span><span id="waveDisplay">1</span>
+        </div>
+        <!-- Tutorial UI -->
+        <div id="tutorialUI" class="hidden">
+            <span>TUTORIAL</span>
+        </div>
+        <!-- Add pause button (positioned in corner for easy access) -->
+        <button id="pauseBtn" class="hidden">⏸️</button>
+        <button id="soundBtn" class="hidden">🔊</button>
+        <button id="musicBtn" class="hidden">🎵</button>
+        <!-- Add wave announcement overlay (positioned after pause button for proper z-index) -->
+        <div id="waveAnnouncement" class="wave-overlay hidden">
+            <div class="wave-content">
+                <h2 class="wave-title">WAVE</h2>
+                <div class="wave-number" id="waveAnnouncementNumber">1</div>
+                <p class="wave-subtitle">Get Ready!</p>
+            </div>
+        </div>
+        <!-- Settings Button -->
+        <button id="settingsBtn" class="hidden">⚙️</button>
+        <!-- Daily Rewards Button -->
+        <button id="dailyRewardsBtn" class="hidden">🎁</button>
+
+        <!-- Settings Panel -->
+        <div id="settingsPanel" class="overlay hidden">
+            <div class="settings-content">
+                <h2>SETTINGS</h2>
+                
+                <div class="setting-row">
+                    <span>Sound</span>
+                    <button id="soundToggle" class="toggle-btn">ON</button>
+                </div>
+                
+                <div class="setting-row">
+                    <span>Music</span>
+                    <button id="musicToggle" class="toggle-btn">ON</button>
+                </div>
+                
+                <div class="setting-row">
+                    <span>Graphics</span>
+                    <button id="graphicsToggle" class="toggle-btn">HIGH</button>
+                </div>
+                
+                <div class="setting-row">
+                    <span>Vibration</span>
+                    <button id="vibrationToggle" class="toggle-btn">ON</button>
+                </div>
+                
+                <div class="setting-row">
+                    <a href="#" id="privacyLink">Privacy Policy</a>
+                </div>
+                
+                <button id="closeSettingsBtn" class="close-btn">CLOSE</button>
+            </div>
+        </div>
+
+        <!-- Daily Rewards Panel -->
+        <div id="dailyRewardsPanel" class="overlay hidden">
+            <div class="daily-rewards-content">
+                <h2>DAILY REWARDS</h2>
+                
+                <div class="streak-display">
+                    <span id="streakCount">0</span> Day Streak
+                </div>
+                
+                <div class="rewards-grid">
+                    <div class="reward-day" data-day="1">
+                        <div class="reward-icon">💎</div>
+                        <div class="reward-amount">50</div>
+                        <div class="reward-label">Day 1</div>
+                    </div>
+                    <div class="reward-day" data-day="2">
+                        <div class="reward-icon">💎</div>
+                        <div class="reward-amount">100</div>
+                        <div class="reward-label">Day 2</div>
+                    </div>
+                    <div class="reward-day" data-day="3">
+                        <div class="reward-icon">💎</div>
+                        <div class="reward-amount">150</div>
+                        <div class="reward-label">Day 3</div>
+                    </div>
+                    <div class="reward-day" data-day="4">
+                        <div class="reward-icon">💎</div>
+                        <div class="reward-amount">200</div>
+                        <div class="reward-label">Day 4</div>
+                    </div>
+                    <div class="reward-day" data-day="5">
+                        <div class="reward-icon">💎</div>
+                        <div class="reward-amount">300</div>
+                        <div class="reward-label">Day 5</div>
+                    </div>
+                    <div class="reward-day" data-day="6">
+                        <div class="reward-icon">💎</div>
+                        <div class="reward-amount">400</div>
+                        <div class="reward-label">Day 6</div>
+                    </div>
+                    <div class="reward-day" data-day="7">
+                        <div class="reward-day-large">
+                            <div class="reward-icon">💎</div>
+                            <div class="reward-amount">1000</div>
+                            <div class="reward-label">DAY 7</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="next-reward-info">
+                    <p>Next reward in: <span id="nextRewardTimer">--:--</span></p>
+                </div>
+                
+                <button id="claimDailyBtn" class="claim-btn">CLAIM REWARD</button>
+                <button id="closeDailyBtn" class="close-btn">CLOSE</button>
+            </div>
+        </div>
+
+        <!-- Tutorial Overlay -->
+        <div id="tutorialOverlay" class="overlay hidden">
+            <div class="tutorial-content">
+                <div id="tutorialStep" class="tutorial-step">
+                    <div class="tutorial-highlight" id="tutorialHighlight"></div>
+                    <div class="tutorial-text" id="tutorialText"></div>
+                    <div class="tutorial-progress">
+                        <div class="tutorial-progress-bar" id="tutorialProgress"></div>
+                    </div>
+                </div>
+                <button id="tutorialSkipBtn" class="skip-btn">SKIP</button>
+            </div>
+        </div>
+
+        <!-- Tutorial Hint Display -->
+        <div id="tutorialHint" class="hidden">
+            <span id="hintText"></span>
+        </div>
+
+        <!-- Daily Reward Notification -->
+        <div id="dailyRewardNotification" class="notification hidden">
+            <div class="notification-content">
+                <span class="notification-icon">🎁</span>
+                <span class="notification-text">Daily Reward Ready!</span>
+            </div>
+        </div>
+        <div id="playerHighlight" class="hidden">
+            <div id="playerHighlightBox"></div>
+        </div>
+        <!-- Add pause menu overlay -->
+        <div id="pauseMenu" class="overlay hidden">
+            <div class="pause-content">
+                <h2>PAUSED</h2>
+                <button id="resumeBtn">RESUME</button>
+                <button id="restartFromPauseBtn">RESTART</button>
+                <button id="quitBtn">QUIT TO MENU</button>
+            </div>
+        </div>
+        <!-- Add boss health bar -->
+        <div id="bossHealthBar" class="hidden">
+            <div id="bossName">BOSS</div>
+            <div id="bossHealthContainer">
+                <div id="bossHealthFill"></div>
+            </div>
+        </div>
+        <div id="startScreen" class="overlay">
+            <h1>PEW RUN</h1>
+           <p>Auto-shoot, drag to move left/right</p>
+           <p>High Score: <span id="startHighScore">0</span></p>
+            <button id="startBtn">START</button>
+        </div>
+        <div id="gameOverScreen" class="overlay hidden">
+            <h1>GAME OVER</h1>
+            <p>Score: <span id="finalScore">0</span></p>
+            <p>High Score: <span id="highScoreDisplay">0</span></p>
+            <p>Enemies Killed: <span id="enemiesKilledDisplay">0</span></p>
+            <p>Total Games: <span id="totalGamesDisplay">0</span></p>
+            <p>Total Enemies: <span id="totalEnemiesDisplay">0</span></p>
+            <button id="restartBtn">RESTART</button>
+        </div>
+    </div>
+    <script src="game.js?v=3"></script>
+</body>
+</html>

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>High Score Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #0f0f1a;
+            color: white;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #4ecdc4;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            background-color: #4ecdc4;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #3db8b0;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #1a1a2a;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <h1>High Score localStorage Test</h1>
+    
+    <div class="test-section">
+        <h2>Test localStorage Functions</h2>
+        <button onclick="testHighScoreSave()">Test Save High Score</button>
+        <button onclick="testHighScoreLoad()">Test Load High Score</button>
+        <button onclick="testGameStats()">Test Game Stats</button>
+        <button onclick="clearStorage()">Clear Storage</button>
+        <div id="testResult" class="result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Current Storage</h2>
+        <div id="currentStorage" class="result"></div>
+    </div>
+
+    <script>
+        function updateDisplay() {
+            const storage = {
+                highScore: localStorage.getItem('highScore') || '0',
+                totalGames: localStorage.getItem('totalGames') || '0',
+                totalEnemiesKilled: localStorage.getItem('totalEnemiesKilled') || '0'
+            };
+            document.getElementById('currentStorage').innerHTML = JSON.stringify(storage, null, 2);
+        }
+
+        function testHighScoreSave() {
+            const testScore = 1234;
+            const currentHighScore = parseInt(localStorage.getItem('highScore') || '0');
+            
+            if (testScore > currentHighScore) {
+                localStorage.setItem('highScore', testScore.toString());
+                document.getElementById('testResult').innerHTML = 
+                    `✅ High score saved: ${testScore} (previous: ${currentHighScore})`;
+            } else {
+                document.getElementById('testResult').innerHTML = 
+                    `⚠️ Test score ${testScore} not higher than current ${currentHighScore}`;
+            }
+            updateDisplay();
+        }
+
+        function testHighScoreLoad() {
+            const highScore = parseInt(localStorage.getItem('highScore') || '0');
+            document.getElementById('testResult').innerHTML = 
+                `📖 Loaded high score: ${highScore}`;
+        }
+
+        function testGameStats() {
+            // Simulate game stats update
+            const totalGames = parseInt(localStorage.getItem('totalGames') || '0');
+            const totalEnemiesKilled = parseInt(localStorage.getItem('totalEnemiesKilled') || '0');
+            
+            localStorage.setItem('totalGames', (totalGames + 1).toString());
+            localStorage.setItem('totalEnemiesKilled', (totalEnemiesKilled + 5).toString());
+            
+            document.getElementById('testResult').innerHTML = 
+                `📊 Game stats updated: Games: ${totalGames + 1}, Enemies: ${totalEnemiesKilled + 5}`;
+            updateDisplay();
+        }
+
+        function clearStorage() {
+            localStorage.clear();
+            document.getElementById('testResult').innerHTML = 
+                `🗑️ Storage cleared`;
+            updateDisplay();
+        }
+
+        // Initialize display
+        updateDisplay();
+    </script>
+</body>
+</html>

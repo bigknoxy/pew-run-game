@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Gun Run Game - Test</title>
+    <style>
+        body { margin: 0; padding: 20px; font-family: Arial; }
+        #gameCanvas { border: 2px solid #333; background: #0f0f1a; }
+        .test-info { margin: 10px 0; }
+        .pass { color: green; }
+        .fail { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Gun Run Game - Delta Time Test</h1>
+    <div id="testResults" class="test-info"></div>
+    <canvas id="gameCanvas" width="400" height="600"></canvas>
+    
+    <script>
+        // Mock DOM elements that the game expects
+        const mockElements = {
+            scoreValue: { textContent: '0' },
+            healthValue: { textContent: '100' },
+            ammoValue: { textContent: '30' },
+            startScreen: { classList: { add: () => {}, remove: () => {} } },
+            gameOverScreen: { classList: { add: () => {}, remove: () => {} } },
+            finalScore: { textContent: '0' },
+            startBtn: { addEventListener: () => {} },
+            restartBtn: { addEventListener: () => {} }
+        };
+        
+        // Create mock elements
+        Object.keys(mockElements).forEach(id => {
+            if (!document.getElementById(id)) {
+                const elem = document.createElement('div');
+                elem.id = id;
+                elem.style.display = 'none';
+                document.body.appendChild(elem);
+                Object.assign(elem, mockElements[id]);
+            }
+        });
+        
+        const testResults = document.getElementById('testResults');
+        
+        function addTest(name, passed, message) {
+            const div = document.createElement('div');
+            div.className = passed ? 'pass' : 'fail';
+            div.textContent = `${passed ? '✓' : '✗'} ${name}: ${message}`;
+            testResults.appendChild(div);
+        }
+        
+        // Test 1: Check if normalizeDelta function exists
+        try {
+            // Load the game script
+            const script = document.createElement('script');
+            script.src = 'game.js';
+            script.onload = function() {
+                try {
+                    if (typeof normalizeDelta === 'function') {
+                        addTest('normalizeDelta function', true, 'Function exists');
+                        
+                        // Test normalization at 60fps
+                        const result60fps = normalizeDelta(16.67); // ~60fps
+                        addTest('60fps normalization', Math.abs(result60fps - 1.0) < 0.1, `Result: ${result60fps.toFixed(2)}`);
+                        
+                        // Test normalization at 30fps
+                        const result30fps = normalizeDelta(33.33); // ~30fps
+                        addTest('30fps normalization', Math.abs(result30fps - 2.0) < 0.1, `Result: ${result30fps.toFixed(2)}`);
+                        
+                        // Test accumulator variables exist
+                        if (typeof enemySpawnAccumulator !== 'undefined') {
+                            addTest('Accumulator variables', true, 'All accumulators defined');
+                        } else {
+                            addTest('Accumulator variables', false, 'Missing accumulator variables');
+                        }
+                        
+                        addTest('Game loads', true, 'All syntax checks passed');
+                        
+                    } else {
+                        addTest('normalizeDelta function', false, 'Function not found');
+                    }
+                } catch (e) {
+                    addTest('Game loads', false, `Error: ${e.message}`);
+                }
+            };
+            script.onerror = function() {
+                addTest('Game loads', false, 'Failed to load game.js');
+            };
+            document.head.appendChild(script);
+            
+        } catch (e) {
+            addTest('Test setup', false, `Error: ${e.message}`);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Player Visibility Test</title>
+    <style>
+        body { margin: 20px; font-family: Arial, sans-serif; }
+        .test { margin: 10px 0; padding: 10px; border: 1px solid #ccc; }
+        .pass { background: #d4edda; border-color: #c3e6cb; }
+        .fail { background: #f8d7da; border-color: #f5c6cb; }
+        iframe { width: 400px; height: 600px; border: 2px solid #333; }
+    </style>
+</head>
+<body>
+    <h1>Player Visibility Test</h1>
+    
+    <div class="test" id="loadTest">
+        <strong>Game Loading:</strong> <span id="loadStatus">Testing...</span>
+    </div>
+    
+    <div class="test" id="elementTest">
+        <strong>Required Elements:</strong> <span id="elementStatus">Testing...</span>
+    </div>
+    
+    <iframe id="gameFrame" src="index.html"></iframe>
+    
+    <script>
+        setTimeout(() => {
+            const frame = document.getElementById('gameFrame');
+            const frameDoc = frame.contentDocument || frame.contentWindow.document;
+            
+            // Test 1: Check if game loads
+            const canvas = frameDoc.getElementById('gameCanvas');
+            const loadTest = document.getElementById('loadTest');
+            const loadStatus = document.getElementById('loadStatus');
+            
+            if (canvas) {
+                loadTest.className = 'test pass';
+                loadStatus.textContent = '✓ Game loaded successfully';
+            } else {
+                loadTest.className = 'test fail';
+                loadStatus.textContent = '✗ Game failed to load';
+            }
+            
+            // Test 2: Check required elements
+            const elementTest = document.getElementById('elementTest');
+            const elementStatus = document.getElementById('elementStatus');
+            
+            const playerHighlight = frameDoc.getElementById('playerHighlight');
+            const playerHighlightBox = frameDoc.getElementById('playerHighlightBox');
+            const waveAnnouncement = frameDoc.getElementById('waveAnnouncement');
+            
+            let allElementsPresent = canvas && playerHighlight && playerHighlightBox && waveAnnouncement;
+            
+            if (allElementsPresent) {
+                elementTest.className = 'test pass';
+                elementStatus.textContent = '✓ All required elements present';
+            } else {
+                elementTest.className = 'test fail';
+                elementStatus.textContent = `✗ Missing elements: ${[
+                    !canvas ? 'canvas' : '',
+                    !playerHighlight ? 'playerHighlight' : '',
+                    !playerHighlightBox ? 'playerHighlightBox' : '',
+                    !waveAnnouncement ? 'waveAnnouncement' : ''
+                ].filter(Boolean).join(', ')}`;
+            }
+            
+            // Test 3: Check if game.js has the updated player position
+            fetch('game.js')
+                .then(response => response.text())
+                .then(jsContent => {
+                    const positionTest = document.createElement('div');
+                    positionTest.className = 'test';
+                    positionTest.innerHTML = '<strong>Player Position:</strong> <span id="positionStatus">Testing...</span>';
+                    document.body.appendChild(positionTest);
+                    
+                    const positionStatus = document.getElementById('positionStatus');
+                    
+                    if (jsContent.includes('player.y = canvas.height - player.height - 80')) {
+                        positionTest.className = 'test pass';
+                        positionStatus.textContent = '✓ Player position raised to 80px';
+                    } else {
+                        positionTest.className = 'test fail';
+                        positionStatus.textContent = '✗ Player position not updated';
+                    }
+                    
+                    // Test 4: Check for glow effect
+                    const glowTest = document.createElement('div');
+                    glowTest.className = 'test';
+                    glowTest.innerHTML = '<strong>Glow Effect:</strong> <span id="glowStatus">Testing...</span>';
+                    document.body.appendChild(glowTest);
+                    
+                    const glowStatus = document.getElementById('glowStatus');
+                    
+                    if (jsContent.includes('shadowBlur') && jsContent.includes('shadowColor')) {
+                        glowTest.className = 'test pass';
+                        glowStatus.textContent = '✓ Glow effect implemented';
+                    } else {
+                        glowTest.className = 'test fail';
+                        glowStatus.textContent = '✗ Glow effect not found';
+                    }
+                    
+                    // Test 5: Check for touch feedback
+                    const touchTest = document.createElement('div');
+                    touchTest.className = 'test';
+                    touchTest.innerHTML = '<strong>Touch Feedback:</strong> <span id="touchStatus">Testing...</span>';
+                    document.body.appendChild(touchTest);
+                    
+                    const touchStatus = document.getElementById('touchStatus');
+                    
+                    if (jsContent.includes('playerHighlight.classList.remove(\'hidden\')')) {
+                        touchTest.className = 'test pass';
+                        touchStatus.textContent = '✓ Touch feedback implemented';
+                    } else {
+                        touchTest.className = 'test fail';
+                        touchStatus.textContent = '✗ Touch feedback not found';
+                    }
+                });
+            
+            // Test 6: Check CSS for wave announcement position
+            fetch('style.css')
+                .then(response => response.text())
+                .then(cssContent => {
+                    const cssTest = document.createElement('div');
+                    cssTest.className = 'test';
+                    cssTest.innerHTML = '<strong>Wave Position:</strong> <span id="cssStatus">Testing...</span>';
+                    document.body.appendChild(cssTest);
+                    
+                    const cssStatus = document.getElementById('cssStatus');
+                    
+                    if (cssContent.includes('top: 150px') && cssContent.includes('.wave-overlay')) {
+                        cssTest.className = 'test pass';
+                        cssStatus.textContent = '✓ Wave announcement moved higher';
+                    } else {
+                        cssTest.className = 'test fail';
+                        cssStatus.textContent = '✗ Wave position not updated';
+                    }
+                    
+                    // Test 7: Check CSS for player highlight
+                    const highlightTest = document.createElement('div');
+                    highlightTest.className = 'test';
+                    highlightTest.innerHTML = '<strong>Highlight CSS:</strong> <span id="highlightStatus">Testing...</span>';
+                    document.body.appendChild(highlightTest);
+                    
+                    const highlightStatus = document.getElementById('highlightStatus');
+                    
+                    if (cssContent.includes('#playerHighlight') && cssContent.includes('#playerHighlightBox')) {
+                        highlightTest.className = 'test pass';
+                        highlightStatus.textContent = '✓ Player highlight styling added';
+                    } else {
+                        highlightTest.className = 'test fail';
+                        highlightStatus.textContent = '✗ Player highlight CSS not found';
+                    }
+                });
+            
+        }, 2000); // Wait 2 seconds for game to load
+    </script>
+</body>
+</html>
