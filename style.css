@@ -637,7 +637,7 @@ html, body {
 }
 
 .toggle-btn {
-    padding: 8px 20px;
+    padding: 14px 20px;
     font-size: 16px;
     font-weight: bold;
     background: #4ecdc4;
@@ -646,6 +646,7 @@ html, body {
     color: #0f0f1a;
     cursor: pointer;
     min-width: 80px;
+    min-height: 44px;
 }
 
 .toggle-btn.off {
@@ -971,4 +972,161 @@ html, body {
     border-radius: 5px;
     font-size: 12px;
     font-weight: bold;
+}
+
+/* Shop Panel */
+.shop-open-btn {
+    margin-top: 10px;
+    padding: 12px 30px;
+    font-size: 18px;
+    background: linear-gradient(135deg, #f39c12, #e67e22);
+}
+
+#shopPanel {
+    background: rgba(0, 0, 0, 0.95);
+}
+
+.shop-content {
+    text-align: center;
+    padding: 20px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.shop-content h2 {
+    font-size: 32px;
+    color: #f39c12;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 4px;
+}
+
+.shop-gems-display {
+    font-size: 22px;
+    color: #4ecdc4;
+    margin-bottom: 20px;
+}
+
+.shop-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    max-width: 500px;
+    margin: 0 auto 20px;
+}
+
+.shop-item {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 15px 10px;
+    text-align: center;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.shop-icon {
+    font-size: 28px;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.shop-name {
+    font-size: 14px;
+    font-weight: bold;
+    color: white;
+    margin-bottom: 4px;
+}
+
+.shop-desc {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 6px;
+}
+
+.shop-owned {
+    font-size: 11px;
+    color: #4ecdc4;
+    margin-bottom: 8px;
+}
+
+.shop-buy-btn {
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: bold;
+    background: linear-gradient(135deg, #f39c12, #e67e22);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    cursor: pointer;
+    min-height: 44px;
+}
+
+.shop-buy-btn:disabled {
+    background: #444;
+    color: #888;
+    cursor: not-allowed;
+}
+
+.shop-buy-btn.equipped {
+    background: #4ecdc4;
+    color: #0f0f1a;
+}
+
+.shop-buy-btn.owned {
+    background: #555;
+    color: #aaa;
+}
+
+/* Revive Prompt */
+#revivePrompt {
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 20;
+}
+
+.revive-content {
+    text-align: center;
+}
+
+.revive-content h2 {
+    font-size: 48px;
+    color: #e74c3c;
+    margin-bottom: 10px;
+}
+
+.revive-desc {
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 20px;
+}
+
+.revive-timer {
+    font-size: 64px;
+    font-weight: 900;
+    color: #f39c12;
+    margin-bottom: 20px;
+}
+
+.revive-btn {
+    display: block;
+    width: 220px;
+    margin: 10px auto;
+    padding: 15px 30px;
+    font-size: 20px;
+    font-weight: bold;
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    border: none;
+    border-radius: 10px;
+    color: white;
+    cursor: pointer;
+}
+
+.revive-btn:active {
+    transform: scale(0.95);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
 }

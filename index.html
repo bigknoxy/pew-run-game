@@ -219,15 +219,71 @@
            <p>Auto-shoot, drag to move left/right</p>
            <p>High Score: <span id="startHighScore">0</span></p>
             <button id="startBtn">START</button>
+            <button id="shopBtn" class="shop-open-btn">SHOP</button>
         </div>
         <div id="gameOverScreen" class="overlay hidden">
             <h1>GAME OVER</h1>
             <p>Score: <span id="finalScore">0</span></p>
             <p>High Score: <span id="highScoreDisplay">0</span></p>
+            <p>Wave Reached: <span id="waveReachedDisplay">1</span></p>
             <p>Enemies Killed: <span id="enemiesKilledDisplay">0</span></p>
             <p>Total Games: <span id="totalGamesDisplay">0</span></p>
             <p>Total Enemies: <span id="totalEnemiesDisplay">0</span></p>
             <button id="restartBtn">RESTART</button>
+        </div>
+
+        <!-- Revive Prompt -->
+        <div id="revivePrompt" class="overlay hidden">
+            <div class="revive-content">
+                <h2>REVIVE?</h2>
+                <p class="revive-desc">Continue with 50% health</p>
+                <div class="revive-timer" id="reviveTimer">5</div>
+                <button id="reviveBtn" class="revive-btn">REVIVE (1 token)</button>
+                <button id="reviveSkipBtn" class="close-btn">GIVE UP</button>
+            </div>
+        </div>
+
+        <!-- Shop Panel -->
+        <div id="shopPanel" class="overlay hidden">
+            <div class="shop-content">
+                <h2>SHOP</h2>
+                <p class="shop-gems-display">Gems: <span id="shopGemsDisplay">0</span></p>
+                <div class="shop-grid">
+                    <div class="shop-item" data-item="revive">
+                        <div class="shop-icon">+1</div>
+                        <div class="shop-name">Extra Life</div>
+                        <div class="shop-desc">Revive once per game</div>
+                        <div class="shop-owned" id="reviveCount">0 owned</div>
+                        <button class="shop-buy-btn" data-item="revive" data-cost="500">500 gems</button>
+                    </div>
+                    <div class="shop-item" data-item="ammoBoost">
+                        <div class="shop-icon">+10</div>
+                        <div class="shop-name">Ammo Boost</div>
+                        <div class="shop-desc">Start with +10 ammo</div>
+                        <div class="shop-owned" id="ammoBoostStatus">Not owned</div>
+                        <button class="shop-buy-btn" data-item="ammoBoost" data-cost="200">200 gems</button>
+                    </div>
+                    <div class="shop-item" data-item="skin_red">
+                        <div class="shop-icon" style="color:#ff6b6b">Ship</div>
+                        <div class="shop-name">Red Ship</div>
+                        <div class="shop-owned" id="skinRedStatus">Not owned</div>
+                        <button class="shop-buy-btn" data-item="skin_red" data-cost="300">300 gems</button>
+                    </div>
+                    <div class="shop-item" data-item="skin_gold">
+                        <div class="shop-icon" style="color:#f39c12">Ship</div>
+                        <div class="shop-name">Gold Ship</div>
+                        <div class="shop-owned" id="skinGoldStatus">Not owned</div>
+                        <button class="shop-buy-btn" data-item="skin_gold" data-cost="300">300 gems</button>
+                    </div>
+                    <div class="shop-item" data-item="skin_purple">
+                        <div class="shop-icon" style="color:#9b59b6">Ship</div>
+                        <div class="shop-name">Purple Ship</div>
+                        <div class="shop-owned" id="skinPurpleStatus">Not owned</div>
+                        <button class="shop-buy-btn" data-item="skin_purple" data-cost="300">300 gems</button>
+                    </div>
+                </div>
+                <button id="closeShopBtn" class="close-btn">CLOSE</button>
+            </div>
         </div>
     </div>
     <script src="game.js?v=3"></script>
