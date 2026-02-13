@@ -1509,17 +1509,21 @@ function spawnEnemy() {
     // Determine which enemy type to spawn based on remaining in wave
     const waveConfig = getWaveConfig(currentWave);
     
-    // Simple round-robin spawning from composition
-    let totalSpawned = 0;
+    // Weighted random selection from composition
+    const totalWeight = waveConfig.composition.reduce((sum, g) => sum + g.count, 0);
+    let roll = Math.random() * totalWeight;
+    let selectedType = waveConfig.composition[0].type;
     for (const group of waveConfig.composition) {
-        if (totalSpawned >= 1) break; // Spawn one enemy per call
-        
-        const enemy = createEnemy(group.type);
-        enemy.speed *= waveConfig.speedMultiplier;
-        enemies.push(enemy);
-        enemiesRemaining--;
-        totalSpawned++;
+        roll -= group.count;
+        if (roll <= 0) {
+            selectedType = group.type;
+            break;
+        }
     }
+    const enemy = createEnemy(selectedType);
+    enemy.speed *= waveConfig.speedMultiplier;
+    enemies.push(enemy);
+    enemiesRemaining--;
 }
 
 function spawnObstacle() {
@@ -1637,7 +1641,8 @@ function update(deltaTime, currentTime) {
             return false;
         }
         
-        bullets.forEach((bullet, bi) => {
+        for (let bi = bullets.length - 1; bi >= 0; bi--) {
+            const bullet = bullets[bi];
             if (checkBulletCollision(bullet, enemy)) {
                 enemy.health--;
                 createParticles(bullet.x, bullet.y, 5, '#ffeb3b');
@@ -1650,7 +1655,7 @@ function update(deltaTime, currentTime) {
                     score += enemy.scoreValue;
                     enemiesKilledInGame++;
                     enemiesRemaining--;
-                    
+
                     // Check if boss
                     if (enemy.type === 'BOSS') {
                         boss = null;
@@ -1662,16 +1667,17 @@ function update(deltaTime, currentTime) {
                     triggerScreenShake(25, 8);
                     vibrate(30);
                     playSound('death');
-                    
+
                     // Add tutorial trigger for enemy kills
                     checkTutorialTriggers('kill_enemy');
-                    
+
                     updateUI();
-                    
+
                     // Check wave completion
                     if (enemiesRemaining <= 0) {
                         checkWaveComplete();
                     }
+                    break;
                 } else if (enemy.type === 'BOSS') {
                     // Update boss health bar if boss is damaged but not dead
                     updateBossHealthBar();
@@ -1679,7 +1685,7 @@ function update(deltaTime, currentTime) {
                     vibrate(30);
                 }
             }
-        });
+        }
         
         return enemy.y < canvas.height + enemy.height && enemy.health > 0;
     });
