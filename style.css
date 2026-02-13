@@ -127,8 +127,10 @@ html, body {
     min-height: 100dvh;
     background: #0f0f1a;
     overflow: hidden;
-    /* transform: translateZ(0); */
-    /* -webkit-transform: translateZ(0); */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
 }
 
 #gameCanvas {
@@ -139,8 +141,8 @@ html, body {
 
 #ui {
     position: absolute;
-    top: 10px;
-    left: 10px;
+    top: calc(10px + env(safe-area-inset-top));
+    left: calc(10px + env(safe-area-inset-left));
     color: white;
     font-size: 16px;
     font-weight: bold;
@@ -158,8 +160,8 @@ html, body {
 
 #waveUI {
     position: absolute;
-    top: 75px;
-    left: 10px;
+    top: calc(75px + env(safe-area-inset-top));
+    left: calc(10px + env(safe-area-inset-left));
     font-size: 20px;
     color: #f39c12;
     font-weight: bold;
@@ -225,8 +227,8 @@ html, body {
 
 #pauseBtn {
     position: absolute;
-    top: 10px;
-    right: 10px;
+    top: calc(10px + env(safe-area-inset-top));
+    right: calc(10px + env(safe-area-inset-right));
     width: 50px;
     height: 50px;
     font-size: 24px;
@@ -244,7 +246,7 @@ html, body {
 
 #soundBtn, #musicBtn {
     position: absolute;
-    top: 10px;
+    top: calc(10px + env(safe-area-inset-top));
     width: 50px;
     height: 50px;
     font-size: 24px;
@@ -455,7 +457,7 @@ html, body {
 /* Boss Health Bar Styles */
 #bossHealthBar {
     position: fixed;
-    top: 80px;
+    top: calc(80px + env(safe-area-inset-top));
     left: 50%;
     transform: translateX(-50%);
     width: 80%;
@@ -568,8 +570,8 @@ html, body {
 
 #settingsBtn {
     position: absolute;
-    top: 10px;
-    right: 190px;
+    top: calc(10px + env(safe-area-inset-top));
+    right: calc(190px + env(safe-area-inset-right));
     width: 50px;
     height: 50px;
     font-size: 24px;
@@ -586,8 +588,8 @@ html, body {
 
 #dailyRewardsBtn {
     position: absolute;
-    top: 10px;
-    right: 130px;
+    top: calc(10px + env(safe-area-inset-top));
+    right: calc(130px + env(safe-area-inset-right));
     width: 50px;
     height: 50px;
     font-size: 24px;
@@ -922,8 +924,8 @@ html, body {
 
 .skip-btn {
     position: absolute;
-    top: 80px;
-    right: 20px;
+    top: calc(80px + env(safe-area-inset-top));
+    right: calc(20px + env(safe-area-inset-right));
     padding: 10px 20px;
     font-size: 14px;
     background: transparent;
@@ -961,8 +963,8 @@ html, body {
 
 #tutorialUI {
     position: absolute;
-    top: 60px;
-    right: 10px;
+    top: calc(60px + env(safe-area-inset-top));
+    right: calc(10px + env(safe-area-inset-right));
     background: #4ecdc4;
     color: #0f0f1a;
     padding: 5px 10px;
