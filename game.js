@@ -21,6 +21,153 @@ const waveAnnouncementNumber = document.getElementById('waveAnnouncementNumber')
 const playerHighlight = document.getElementById('playerHighlight');
 const playerHighlightBox = document.getElementById('playerHighlightBox');
 
+function safeSetItem(key, value) {
+    try { safeSetItem(key, value); } catch (e) { /* storage full */ }
+}
+
+// Shop system
+const SKIN_COLORS = { default: '#4ecdc4', red: '#ff6b6b', gold: '#f39c12', purple: '#9b59b6' };
+let shopData = { revives: 0, ammoBoost: false, skins: { red: false, gold: false, purple: false }, activeSkin: 'default' };
+let usedReviveThisGame = false;
+let reviveTimerInterval = null;
+
+function loadShopData() {
+    const saved = localStorage.getItem('shopData');
+    if (saved) {
+        try { shopData = JSON.parse(saved); } catch(e) {}
+    }
+}
+
+function saveShopData() {
+    safeSetItem('shopData', JSON.stringify(shopData));
+}
+
+function buyShopItem(item, cost) {
+    if ((player.gems || 0) < cost) return false;
+    player.gems -= cost;
+    if (item === 'revive') {
+        shopData.revives = (shopData.revives || 0) + 1;
+    } else if (item === 'ammoBoost') {
+        shopData.ammoBoost = true;
+    } else if (item.startsWith('skin_')) {
+        const skinName = item.replace('skin_', '');
+        shopData.skins[skinName] = true;
+        shopData.activeSkin = skinName;
+    }
+    saveShopData();
+    safeSetItem('playerGems', player.gems.toString());
+    updateShopUI();
+    return true;
+}
+
+function equipSkin(skinName) {
+    if (shopData.skins[skinName] || skinName === 'default') {
+        shopData.activeSkin = skinName;
+        player.color = SKIN_COLORS[skinName] || SKIN_COLORS.default;
+        saveShopData();
+        updateShopUI();
+    }
+}
+
+function updateShopUI() {
+    const gemsEl = document.getElementById('shopGemsDisplay');
+    if (gemsEl) gemsEl.textContent = player.gems || 0;
+
+    const reviveCountEl = document.getElementById('reviveCount');
+    if (reviveCountEl) reviveCountEl.textContent = (shopData.revives || 0) + ' owned';
+
+    const ammoEl = document.getElementById('ammoBoostStatus');
+    if (ammoEl) ammoEl.textContent = shopData.ammoBoost ? 'Owned' : 'Not owned';
+
+    const skinMap = { red: 'skinRedStatus', gold: 'skinGoldStatus', purple: 'skinPurpleStatus' };
+    for (const [skin, elId] of Object.entries(skinMap)) {
+        const el = document.getElementById(elId);
+        if (el) {
+            if (shopData.skins[skin] && shopData.activeSkin === skin) el.textContent = 'Equipped';
+            else if (shopData.skins[skin]) el.textContent = 'Owned';
+            else el.textContent = 'Not owned';
+        }
+    }
+
+    // Update buy buttons
+    document.querySelectorAll('.shop-buy-btn').forEach(btn => {
+        const item = btn.dataset.item;
+        const cost = parseInt(btn.dataset.cost);
+        if (item === 'ammoBoost' && shopData.ammoBoost) {
+            btn.textContent = 'OWNED';
+            btn.disabled = true;
+            btn.classList.add('owned');
+        } else if (item.startsWith('skin_')) {
+            const skinName = item.replace('skin_', '');
+            if (shopData.skins[skinName] && shopData.activeSkin === skinName) {
+                btn.textContent = 'EQUIPPED';
+                btn.disabled = true;
+                btn.classList.add('equipped');
+                btn.classList.remove('owned');
+            } else if (shopData.skins[skinName]) {
+                btn.textContent = 'EQUIP';
+                btn.disabled = false;
+                btn.classList.add('owned');
+                btn.classList.remove('equipped');
+            } else {
+                btn.textContent = cost + ' gems';
+                btn.disabled = (player.gems || 0) < cost;
+                btn.classList.remove('owned', 'equipped');
+            }
+        } else {
+            btn.disabled = (player.gems || 0) < cost;
+        }
+    });
+}
+
+function showRevivePrompt() {
+    const prompt = document.getElementById('revivePrompt');
+    const timerEl = document.getElementById('reviveTimer');
+    if (!prompt || !timerEl) { showGameOverScreen(); return; }
+
+    prompt.classList.remove('hidden');
+    let countdown = 5;
+    timerEl.textContent = countdown;
+
+    reviveTimerInterval = setInterval(() => {
+        countdown--;
+        timerEl.textContent = countdown;
+        if (countdown <= 0) {
+            clearInterval(reviveTimerInterval);
+            prompt.classList.add('hidden');
+            showGameOverScreen();
+        }
+    }, 1000);
+}
+
+function doRevive() {
+    clearInterval(reviveTimerInterval);
+    const prompt = document.getElementById('revivePrompt');
+    if (prompt) prompt.classList.add('hidden');
+
+    shopData.revives--;
+    usedReviveThisGame = true;
+    saveShopData();
+
+    player.health = Math.floor(player.maxHealth * 0.5);
+    gameRunning = true;
+    updateUI();
+    lastTime = performance.now();
+    requestAnimationFrame(gameLoop);
+}
+
+function showGameOverScreen() {
+    const gameOverScreen = document.getElementById('gameOverScreen');
+    if (gameOverScreen) gameOverScreen.classList.remove('hidden');
+    if (pauseBtn) pauseBtn.classList.add('hidden');
+    const settingsBtn = document.getElementById('settingsBtn');
+    if (settingsBtn) settingsBtn.classList.add('hidden');
+    const settingsPanel = document.getElementById('settingsPanel');
+    if (settingsPanel) settingsPanel.classList.add('hidden');
+    const dailyRewardsBtn = document.getElementById('dailyRewardsBtn');
+    if (dailyRewardsBtn) dailyRewardsBtn.classList.add('hidden');
+}
+
 let gameRunning = false;
 let score = 0;
 let lastTime = 0;
@@ -107,14 +254,7 @@ const TUTORIAL_STEPS = [
 let tutorialState = {
     currentStep: 0,
     completed: false,
-    skipped: false,
-    actions: {
-        move: false,
-        shoot: false,
-        kill_enemy: false,
-        collect_powerup: false,
-        boss_wave: false
-    }
+    skipped: false
 };
 
 let tutorialTimeout = null;
@@ -141,8 +281,6 @@ function hideSplashScreen() {
 
 // Initialize splash screen on page load - always show for testing
 function initSplashScreen() {
-    console.log('Initializing splash screen');
-    
     // Prevent scroll during splash
     document.body.classList.add('splash-active');
     
@@ -160,8 +298,7 @@ function initSplashScreen() {
 
 // Dismiss splash screen directly (called from onclick)
 function dismissSplashDirect() {
-    console.log('Splash dismissed directly');
-    localStorage.setItem('splashShown', 'true');
+    safeSetItem('splashShown', 'true');
     hideSplashScreen();
     
     // Initialize audio on first interaction
@@ -181,13 +318,8 @@ function dismissSplashDirect() {
 
 // Dismiss splash screen on tap/click
 function setupSplashDismiss() {
-    console.log('Setting up splash dismiss handlers');
-    
     const splash = document.getElementById('splashScreen');
-    if (!splash) {
-        console.log('ERROR: Splash screen element not found');
-        return;
-    }
+    if (!splash) return;
     
     // Simple dismiss function
     const doDismiss = (e) => {
@@ -196,14 +328,12 @@ function setupSplashDismiss() {
             e.stopPropagation();
         }
         
-        console.log('Dismissing splash screen');
-        
         // Hide splash
         splash.classList.add('hidden');
         splash.style.display = 'none';
         
         // Save state
-        localStorage.setItem('splashShown', 'true');
+        safeSetItem('splashShown', 'true');
         
         // Initialize audio
         initAudio();
@@ -226,7 +356,6 @@ function setupSplashDismiss() {
     // Also attach to body for coverage
     document.body.onclick = doDismiss;
     
-    console.log('Splash dismiss handlers attached');
 }
 
 // Audio system
@@ -444,10 +573,10 @@ function loadSettings() {
 }
 
 function saveSettings() {
-    localStorage.setItem('soundEnabled', soundEnabled);
-    localStorage.setItem('musicEnabled', musicEnabled);
-    localStorage.setItem('graphicsQuality', graphicsQuality);
-    localStorage.setItem('vibrationEnabled', vibrationEnabled);
+    safeSetItem('soundEnabled', soundEnabled);
+    safeSetItem('musicEnabled', musicEnabled);
+    safeSetItem('graphicsQuality', graphicsQuality);
+    safeSetItem('vibrationEnabled', vibrationEnabled);
 }
 
 function updateSettingsUI() {
@@ -498,13 +627,9 @@ function loadPlayerGems() {
 }
 
 function saveDailyRewards() {
-    localStorage.setItem('dailyRewards', JSON.stringify(dailyRewards));
+    safeSetItem('dailyRewards', JSON.stringify(dailyRewards));
     // Also save gems
-    localStorage.setItem('playerGems', (player.gems || 0).toString());
-}
-
-function loadPlayerGems() {
-    player.gems = parseInt(localStorage.getItem('playerGems') || '0');
+    safeSetItem('playerGems', (player.gems || 0).toString());
 }
 
 function canClaimReward() {
@@ -515,6 +640,15 @@ function canClaimReward() {
     const timeDiff = now.getTime() - lastClaim.getTime();
     
     return timeDiff >= REWARD_INTERVAL;
+}
+
+function checkDailyRewardAvailability() {
+    const dailyRewardsBtn = document.getElementById('dailyRewardsBtn');
+    if (canClaimReward() && dailyRewardsBtn) {
+        dailyRewardsBtn.classList.remove('hidden');
+    } else if (dailyRewardsBtn) {
+        dailyRewardsBtn.classList.add('hidden');
+    }
 }
 
 function getDaysUntilReward() {
@@ -572,11 +706,13 @@ function claimDailyReward() {
 
 function showRewardClaimAnimation(amount) {
     const notification = document.getElementById('dailyRewardNotification');
+    if (!notification) return;
     const notificationText = notification.querySelector('.notification-text');
-    
+    if (!notificationText) return;
+
     notificationText.textContent = `+${amount} Gems!`;
     notification.classList.remove('hidden');
-    
+
     setTimeout(() => {
         notification.classList.add('hidden');
     }, 3000);
@@ -587,7 +723,8 @@ function updateDailyRewardsUI() {
     const streakCount = document.getElementById('streakCount');
     const claimBtn = document.getElementById('claimDailyBtn');
     const nextTimer = document.getElementById('nextRewardTimer');
-    
+    if (!panel || !streakCount || !claimBtn || !nextTimer) return;
+
     // Update streak
     streakCount.textContent = dailyRewards.consecutiveDays;
     
@@ -644,7 +781,7 @@ const EnemyTypes = {
         height: 30,
         health: 1,
         speed: 6,
-        damage: 15,
+        damage: 25,
         scoreValue: 15,
         color: '#f39c12'  // Orange/Yellow
     },
@@ -702,7 +839,7 @@ function getWaveConfig(waveNumber) {
     const tier = Math.ceil(waveNumber / 5);
     
     // Calculate composition based on tier
-    let baseCount = 10 + (waveNumber - 1) * 3;
+    let baseCount = Math.min(80, 10 + (waveNumber - 1) * 3);
     let composition = [];
     
     // Always have basic enemies
@@ -726,7 +863,7 @@ function getWaveConfig(waveNumber) {
     return {
         isBossWave: false,
         composition: composition,
-        speedMultiplier: 1.0 + (waveNumber - 1) * 0.05,
+        speedMultiplier: Math.min(3.0, 1.0 + (waveNumber - 1) * 0.05),
         spawnRateMultiplier: Math.max(0.5, 1.0 - (waveNumber - 1) * 0.02)
     };
 }
@@ -856,10 +993,16 @@ function createDamageNumber(x, y, damage) {
 
 
 function resizeCanvas() {
+    const oldWidth = canvas.width || canvas.offsetWidth;
+    const relativeX = oldWidth > 0 ? player.x / oldWidth : 0.5;
     canvas.width = canvas.offsetWidth;
     canvas.height = canvas.offsetHeight;
-    player.x = canvas.width / 2 - player.width / 2;
-    player.y = canvas.height - player.height - 80;  // 80px from bottom
+    if (gameRunning) {
+        player.x = Math.max(0, Math.min(canvas.width - player.width, relativeX * canvas.width));
+    } else {
+        player.x = canvas.width / 2 - player.width / 2;
+    }
+    player.y = canvas.height - player.height - 80;
 }
 
 function updateHighScoreDisplay() {
@@ -870,11 +1013,11 @@ function updateHighScoreDisplay() {
 function updateGameStats() {
     // Update total games played
     const totalGames = parseInt(localStorage.getItem('totalGames') || '0');
-    localStorage.setItem('totalGames', (totalGames + 1).toString());
+    safeSetItem('totalGames', (totalGames + 1).toString());
     
     // Update total enemies killed
     const totalEnemiesKilled = parseInt(localStorage.getItem('totalEnemiesKilled') || '0');
-    localStorage.setItem('totalEnemiesKilled', (totalEnemiesKilled + enemiesKilledInGame).toString());
+    safeSetItem('totalEnemiesKilled', (totalEnemiesKilled + enemiesKilledInGame).toString());
 }
 
 // Add pause functions
@@ -934,7 +1077,48 @@ function init() {
         playSound('click');
         startGame();
     });
-    
+
+    // Shop
+    const shopBtn = document.getElementById('shopBtn');
+    const shopPanel = document.getElementById('shopPanel');
+    const closeShopBtn = document.getElementById('closeShopBtn');
+    if (shopBtn && shopPanel) {
+        shopBtn.addEventListener('click', () => {
+            playSound('click');
+            updateShopUI();
+            shopPanel.classList.remove('hidden');
+        });
+    }
+    if (closeShopBtn && shopPanel) {
+        closeShopBtn.addEventListener('click', () => {
+            playSound('click');
+            shopPanel.classList.add('hidden');
+        });
+    }
+    shopPanel && shopPanel.addEventListener('click', (e) => {
+        const btn = e.target.closest('.shop-buy-btn');
+        if (!btn) return;
+        const item = btn.dataset.item;
+        const cost = parseInt(btn.dataset.cost);
+        if (item.startsWith('skin_') && shopData.skins[item.replace('skin_', '')]) {
+            equipSkin(item.replace('skin_', ''));
+        } else {
+            buyShopItem(item, cost);
+        }
+        playSound('click');
+    });
+
+    // Revive
+    const reviveBtn = document.getElementById('reviveBtn');
+    const reviveSkipBtn = document.getElementById('reviveSkipBtn');
+    if (reviveBtn) reviveBtn.addEventListener('click', () => { playSound('powerup'); doRevive(); });
+    if (reviveSkipBtn) reviveSkipBtn.addEventListener('click', () => {
+        clearInterval(reviveTimerInterval);
+        const prompt = document.getElementById('revivePrompt');
+        if (prompt) prompt.classList.add('hidden');
+        showGameOverScreen();
+    });
+
     document.addEventListener('click', initAudioOnFirstInteraction);
     document.addEventListener('touchstart', initAudioOnFirstInteraction);
     
@@ -1053,15 +1237,6 @@ function init() {
         }
     });
 
-    // Show daily rewards notification if available
-    function checkDailyRewardAvailability() {
-        if (canClaimReward() && dailyRewardsBtn) {
-            dailyRewardsBtn.classList.remove('hidden');
-        } else {
-            dailyRewardsBtn.classList.add('hidden');
-        }
-    }
-
     // Update daily rewards button visibility
     function updateDailyRewardsButtonVisibility() {
         if (dailyRewardsBtn) {
@@ -1126,14 +1301,7 @@ function startTutorial() {
     tutorialState.currentStep = 0;
     tutorialState.completed = false;
     tutorialState.skipped = false;
-    tutorialState.actions = {
-        move: false,
-        shoot: false,
-        kill_enemy: false,
-        collect_powerup: false,
-        boss_wave: false
-    };
-    
+
     showTutorialStep(0);
 }
 
@@ -1150,7 +1318,7 @@ function showTutorialStep(stepIndex) {
     }
     
     // Update progress bar
-    const progress = ((stepIndex) / TUTORIAL_STEPS.length) * 100;
+    const progress = ((stepIndex + 1) / TUTORIAL_STEPS.length) * 100;
     document.getElementById('tutorialProgress').style.width = progress + '%';
     
     // Update text
@@ -1197,8 +1365,8 @@ function completeTutorial() {
     tutorialState.completed = true;
     tutorialState.skipped = false;
     
-    localStorage.setItem('tutorialCompleted', 'true');
-    localStorage.setItem('hasPlayed', 'true');
+    safeSetItem('tutorialCompleted', 'true');
+    safeSetItem('hasPlayed', 'true');
     
     hideTutorial();
     
@@ -1211,10 +1379,11 @@ function completeTutorial() {
 // Skip tutorial
 function skipTutorial() {
     tutorialState.skipped = true;
-    
-    localStorage.setItem('tutorialCompleted', 'true');
-    localStorage.setItem('hasPlayed', 'true');
-    
+
+    safeSetItem('tutorialCompleted', 'true');
+    safeSetItem('hasPlayed', 'true');
+
+    showTutorialHint('Tutorial skipped');
     hideTutorial();
 }
 
@@ -1247,9 +1416,7 @@ function trackTutorialAction(action) {
     if (tutorialState.completed || tutorialState.skipped) return;
     
     const step = TUTORIAL_STEPS[tutorialState.currentStep];
-    if (step && step.action === action && !tutorialState.actions[action]) {
-        tutorialState.actions[action] = true;
-        
+    if (step && step.action === action) {
         // Advance to next step immediately
         tutorialState.currentStep++;
         showTutorialStep(tutorialState.currentStep);
@@ -1354,7 +1521,7 @@ function setupControls() {
 
 
 
-function shoot(targetX, targetY) {
+function shoot() {
     if (player.ammo <= 0 || !gameRunning || isPaused) return;
     
     player.ammo--;
@@ -1382,8 +1549,10 @@ function startGame() {
     gameRunning = true;
     score = 0;
     enemiesKilledInGame = 0;
+    usedReviveThisGame = false;
     player.health = player.maxHealth;
-    player.ammo = player.maxAmmo;
+    player.ammo = shopData.ammoBoost ? player.maxAmmo + 10 : player.maxAmmo;
+    player.color = SKIN_COLORS[shopData.activeSkin] || SKIN_COLORS.default;
     player.gems = player.gems || 0;
     player.x = canvas.width / 2 - player.width / 2;
     player.y = canvas.height - player.height - 80;  // 80px from bottom
@@ -1429,7 +1598,7 @@ function startGame() {
     updateSoundButtonVisibility();
     
     // Mark as played
-    localStorage.setItem('hasPlayed', 'true');
+    safeSetItem('hasPlayed', 'true');
     
     // Check if tutorial needed
     if (needsTutorial()) {
@@ -1463,30 +1632,30 @@ function gameOver() {
     const currentHighScore = parseInt(localStorage.getItem('highScore') || '0');
     const flooredScore = Math.floor(score);
     if (flooredScore > currentHighScore) {
-        localStorage.setItem('highScore', flooredScore.toString());
+        safeSetItem('highScore', flooredScore.toString());
     }
     
     // Update game over screen
-    finalScoreEl.textContent = flooredScore;
-    
+    if (finalScoreEl) finalScoreEl.textContent = flooredScore;
+
     // Display high score
     const highScore = parseInt(localStorage.getItem('highScore') || '0');
-    highScoreDisplayEl.textContent = highScore;
-    
+    if (highScoreDisplayEl) highScoreDisplayEl.textContent = highScore;
+
     // Display additional statistics
-    enemiesKilledDisplayEl.textContent = enemiesKilledInGame;
-    totalGamesDisplayEl.textContent = localStorage.getItem('totalGames') || '1';
-    totalEnemiesDisplayEl.textContent = localStorage.getItem('totalEnemiesKilled') || '0';
-    
-    gameOverScreen.classList.remove('hidden');
-    pauseBtn.classList.add('hidden');
-    settingsBtn.classList.add('hidden');
-    settingsPanel.classList.add('hidden');
-    
-    // Hide daily rewards button
-    const dailyRewardsBtn = document.getElementById('dailyRewardsBtn');
-    if (dailyRewardsBtn) {
-        dailyRewardsBtn.classList.add('hidden');
+    if (enemiesKilledDisplayEl) enemiesKilledDisplayEl.textContent = enemiesKilledInGame;
+    if (totalGamesDisplayEl) totalGamesDisplayEl.textContent = localStorage.getItem('totalGames') || '1';
+    if (totalEnemiesDisplayEl) totalEnemiesDisplayEl.textContent = localStorage.getItem('totalEnemiesKilled') || '0';
+
+    // Show wave reached
+    const waveReachedEl = document.getElementById('waveReachedDisplay');
+    if (waveReachedEl) waveReachedEl.textContent = currentWave;
+
+    // Check for revive
+    if (shopData.revives > 0 && !usedReviveThisGame) {
+        showRevivePrompt();
+    } else {
+        showGameOverScreen();
     }
 }
 
@@ -1583,7 +1752,7 @@ function update(deltaTime, currentTime) {
     const dt = normalizeDelta(deltaTime);
     const fireRate = Math.max(minFireRate, baseFireRate - score * 0.05);
     if (currentTime - lastShotTime >= fireRate && player.ammo > 0 && gameRunning) {
-        shoot(player.x + player.width / 2, 0);
+        shoot();
         lastShotTime = currentTime;
     }
     
@@ -1619,7 +1788,6 @@ function update(deltaTime, currentTime) {
     });
     
     enemies = enemies.filter(enemy => {
-        const dt = normalizeDelta(deltaTime);
         enemy.y += enemy.speed * dt;
         
         // Add boss respawn logic:
@@ -1691,13 +1859,15 @@ function update(deltaTime, currentTime) {
     });
     
     obstacles = obstacles.filter(obstacle => {
-        const dt = normalizeDelta(deltaTime);
         obstacle.y += obstacle.speed * dt;
         
         if (checkCollision(player, obstacle)) {
             player.health -= 30;
             createParticles(obstacle.x + obstacle.width / 2, obstacle.y + obstacle.height / 2, 10, obstacle.color);
             updateUI();
+            triggerScreenShake(25, 8);
+            vibrate(20);
+            playSound('hit');
             return false;
         }
         
@@ -1705,7 +1875,6 @@ function update(deltaTime, currentTime) {
     });
     
     powerups = powerups.filter(powerup => {
-        const dt = normalizeDelta(deltaTime);
         powerup.y += powerup.speed * dt;
         
         if (checkCollision(player, powerup)) {
@@ -1728,7 +1897,6 @@ function update(deltaTime, currentTime) {
     });
     
     particles = particles.filter(particle => {
-        const dt = normalizeDelta(deltaTime);
         particle.x += particle.vx * dt;
         particle.y += particle.vy * dt;
         particle.life -= (particle.decay || 0.02) * dt;
@@ -1831,12 +1999,14 @@ function draw() {
     ctx.fillStyle = '#0f0f1a';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    // Draw glow effect
-    ctx.shadowBlur = 20;
-    ctx.shadowColor = player.color;
+    // Draw player with optional glow
+    if (graphicsQuality === 'high') {
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = player.color;
+    }
     ctx.fillStyle = player.color;
     ctx.fillRect(player.x, player.y, player.width, player.height);
-    ctx.shadowBlur = 0;  // Reset
+    ctx.shadowBlur = 0;
 
     // Add highlight on top edge
     ctx.fillStyle = 'rgba(255,255,255,0.3)';
@@ -1978,6 +2148,7 @@ loadSettings();
 // Initialize daily rewards
 loadDailyRewards();
 loadPlayerGems();
+loadShopData();
 checkDailyRewardAvailability();
 
 // Wave Announcement Functions
@@ -2021,4 +2192,3 @@ if (needsTutorial()) {
 
 // Initialize splash screen
 initSplashScreen();
-setupSplashDismiss();
