@@ -181,13 +181,17 @@ html, body {
     align-items: center;
     color: white;
     z-index: 10;
+    opacity: 1;
+    transition: opacity 0.25s ease;
+    pointer-events: auto;
 }
 
 .overlay.hidden {
-    display: none;
+    opacity: 0;
+    pointer-events: none;
 }
 
-.hidden {
+.hidden:not(.overlay) {
     display: none;
 }
 
@@ -686,6 +690,7 @@ html, body {
 /* Daily Rewards Panel */
 #dailyRewardsPanel {
     background: rgba(0, 0, 0, 0.9);
+    z-index: 15;
 }
 
 .daily-rewards-content {
@@ -1121,6 +1126,20 @@ html, body {
 
 .revive-btn:active {
     transform: scale(0.95);
+}
+
+.new-high-score {
+    font-size: 28px;
+    font-weight: bold;
+    color: #f39c12;
+    text-shadow: 0 0 20px rgba(243,156,18,0.8);
+    animation: highScorePulse 0.8s ease-in-out infinite alternate;
+    margin-bottom: 10px;
+}
+
+@keyframes highScorePulse {
+    from { transform: scale(1); text-shadow: 0 0 20px rgba(243,156,18,0.5); }
+    to { transform: scale(1.1); text-shadow: 0 0 40px rgba(243,156,18,1); }
 }
 
 @media (prefers-reduced-motion: reduce) {
