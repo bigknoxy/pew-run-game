@@ -159,6 +159,18 @@ function doRevive() {
 function showGameOverScreen() {
     const gameOverScreen = document.getElementById('gameOverScreen');
     if (gameOverScreen) gameOverScreen.classList.remove('hidden');
+
+    const newHighScoreEl = document.getElementById('newHighScoreEl');
+    if (newHighScoreEl) {
+        if (isNewHighScore) {
+            newHighScoreEl.classList.remove('hidden');
+            playSound('highScore');
+            createParticles(canvas.width / 2, canvas.height / 2, 40, '#f39c12');
+        } else {
+            newHighScoreEl.classList.add('hidden');
+        }
+    }
+
     if (pauseBtn) pauseBtn.classList.add('hidden');
     const settingsBtn = document.getElementById('settingsBtn');
     if (settingsBtn) settingsBtn.classList.add('hidden');
@@ -169,6 +181,7 @@ function showGameOverScreen() {
 }
 
 let gameRunning = false;
+let isNewHighScore = false;
 let score = 0;
 let lastTime = 0;
 let lastShotTime = 0;
@@ -331,6 +344,7 @@ function setupSplashDismiss() {
         // Hide splash
         splash.classList.add('hidden');
         splash.style.display = 'none';
+        document.body.onclick = null;
         
         // Save state
         safeSetItem('splashShown', 'true');
@@ -365,6 +379,9 @@ let musicGain = null;
 let isBossMusic = false;
 let soundEnabled = true;
 let musicEnabled = true;
+let bgMusicNodes = null;
+let bgMusicInterval = null;
+let isBgMusicPlaying = false;
 let graphicsQuality = 'high';
 let vibrationEnabled = true;
 
@@ -478,11 +495,30 @@ function playSound(type) {
             });
             gain.gain.value = 0; // Don't play base sound
             break;
+
+        case 'highScore':
+            // Rising 3-note chime
+            const hsNotes = [523, 784, 1047];
+            hsNotes.forEach((freq, i) => {
+                const o = audioCtx.createOscillator();
+                const g = audioCtx.createGain();
+                o.connect(g);
+                g.connect(audioCtx.destination);
+                o.type = 'sine';
+                o.frequency.setValueAtTime(freq, now + i * 0.15);
+                g.gain.setValueAtTime(0.12, now + i * 0.15);
+                g.gain.exponentialRampToValueAtTime(0.01, now + i * 0.15 + 0.3);
+                o.start(now + i * 0.15);
+                o.stop(now + i * 0.15 + 0.3);
+            });
+            gain.gain.value = 0;
+            break;
     }
 }
 
 // Boss music system
 function startBossMusic() {
+    stopBgMusic();
     if (!musicEnabled || !audioCtx || isBossMusic) return;
     isBossMusic = true;
     
@@ -507,6 +543,56 @@ function stopBossMusic() {
     isBossMusic = false;
 }
 
+function startBgMusic() {
+    if (!musicEnabled || !audioCtx || isBgMusicPlaying) return;
+    isBgMusicPlaying = true;
+
+    const baseNotes = [65.41, 82.41, 98.00, 73.42];
+    let noteIndex = 0;
+
+    bgMusicNodes = {
+        osc: audioCtx.createOscillator(),
+        osc2: audioCtx.createOscillator(),
+        gain: audioCtx.createGain()
+    };
+
+    bgMusicNodes.osc.connect(bgMusicNodes.gain);
+    bgMusicNodes.osc2.connect(bgMusicNodes.gain);
+    bgMusicNodes.gain.connect(audioCtx.destination);
+
+    bgMusicNodes.osc.type = 'sine';
+    bgMusicNodes.osc2.type = 'triangle';
+    bgMusicNodes.osc.frequency.setValueAtTime(baseNotes[0], audioCtx.currentTime);
+    bgMusicNodes.osc2.frequency.setValueAtTime(baseNotes[0] * 2, audioCtx.currentTime);
+    bgMusicNodes.gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+
+    bgMusicNodes.osc.start();
+    bgMusicNodes.osc2.start();
+
+    bgMusicInterval = setInterval(() => {
+        if (!audioCtx || !bgMusicNodes) return;
+        noteIndex = (noteIndex + 1) % baseNotes.length;
+        const now = audioCtx.currentTime;
+        bgMusicNodes.osc.frequency.setTargetAtTime(baseNotes[noteIndex], now, 0.05);
+        bgMusicNodes.osc2.frequency.setTargetAtTime(baseNotes[noteIndex] * 2, now, 0.05);
+    }, 428);
+}
+
+function stopBgMusic() {
+    if (bgMusicInterval) {
+        clearInterval(bgMusicInterval);
+        bgMusicInterval = null;
+    }
+    if (bgMusicNodes) {
+        try {
+            bgMusicNodes.osc.stop();
+            bgMusicNodes.osc2.stop();
+        } catch (e) {}
+        bgMusicNodes = null;
+    }
+    isBgMusicPlaying = false;
+}
+
 // Sound/music toggle
 const soundBtn = document.getElementById('soundBtn');
 const musicBtn = document.getElementById('musicBtn');
@@ -522,10 +608,15 @@ musicBtn.addEventListener('click', () => {
     musicEnabled = !musicEnabled;
     saveSettings();
     updateSettingsUI();
-    if (!musicEnabled && isBossMusic) {
-        stopBossMusic();
-    } else if (musicEnabled && isBossWave) {
-        startBossMusic();
+    if (!musicEnabled) {
+        if (isBossMusic) stopBossMusic();
+        stopBgMusic();
+    } else if (gameRunning) {
+        if (isBossWave) {
+            startBossMusic();
+        } else {
+            startBgMusic();
+        }
     }
     playSound('click');
 });
@@ -870,7 +961,7 @@ function getWaveConfig(waveNumber) {
 
 function createEnemy(type) {
     const config = EnemyTypes[type] || EnemyTypes.BASIC;
-    return {
+    const enemy = {
         x: Math.random() * (canvas.width - config.width),
         y: -config.height - 10,
         width: config.width,
@@ -883,6 +974,19 @@ function createEnemy(type) {
         type: type,
         maxHealth: config.health
     };
+
+    if (type === 'FAST') {
+        enemy.phaseOffset = Math.random() * Math.PI * 2;
+        enemy.amplitude = 60 + Math.random() * 40;
+    } else if (type === 'TANK') {
+        enemy.zigzagDir = Math.random() < 0.5 ? 1 : -1;
+        enemy.zigzagTimer = 0;
+    } else if (type === 'BOSS') {
+        enemy.driftDir = 1;
+        enemy.targetY = 80;
+    }
+
+    return enemy;
 }
 
 function spawnEnemyFromConfig(type, count, speedMult) {
@@ -928,6 +1032,7 @@ function checkBossDefeated() {
         vibrate(30);
         playSound('bossDefeat');
         stopBossMusic();
+        startBgMusic();
         checkWaveComplete();
     }
 }
@@ -964,6 +1069,7 @@ let enemies = [];
 let obstacles = [];
 let powerups = [];
 let particles = [];
+const keysPressed = {};
 
 // Screen shake system
 let screenShake = {
@@ -1023,16 +1129,23 @@ function updateGameStats() {
 // Add pause functions
 function pauseGame() {
     if (!gameRunning || isPaused) return;
-    
+
     isPaused = true;
     pauseMenu.classList.remove('hidden');
+    stopBgMusic();
+    if (isBossMusic) stopBossMusic();
 }
 
 function resumeGame() {
     if (!isPaused) return;
-    
+
     isPaused = false;
     pauseMenu.classList.add('hidden');
+    if (isBossWave) {
+        startBossMusic();
+    } else if (gameRunning) {
+        startBgMusic();
+    }
 }
 
 function restartFromPause() {
@@ -1041,7 +1154,10 @@ function restartFromPause() {
 }
 
 function quitToMenu() {
-    resumeGame();
+    stopBgMusic();
+    stopBossMusic();
+    isPaused = false;
+    pauseMenu.classList.add('hidden');
     gameOver();
     // Show start screen
     document.getElementById('startScreen').classList.remove('hidden');
@@ -1082,17 +1198,36 @@ function init() {
     const shopBtn = document.getElementById('shopBtn');
     const shopPanel = document.getElementById('shopPanel');
     const closeShopBtn = document.getElementById('closeShopBtn');
+    let shopOpenedFrom = null;
+
+    function openShop(from) {
+        shopOpenedFrom = from;
+        playSound('click');
+        updateShopUI();
+        shopPanel.classList.remove('hidden');
+    }
+
     if (shopBtn && shopPanel) {
-        shopBtn.addEventListener('click', () => {
-            playSound('click');
-            updateShopUI();
-            shopPanel.classList.remove('hidden');
-        });
+        shopBtn.addEventListener('click', () => openShop(null));
+    }
+    const pauseShopBtn = document.getElementById('pauseShopBtn');
+    if (pauseShopBtn) {
+        pauseShopBtn.addEventListener('click', () => openShop('pause'));
+    }
+    const gameOverShopBtn = document.getElementById('gameOverShopBtn');
+    if (gameOverShopBtn) {
+        gameOverShopBtn.addEventListener('click', () => openShop('gameOver'));
     }
     if (closeShopBtn && shopPanel) {
         closeShopBtn.addEventListener('click', () => {
             playSound('click');
             shopPanel.classList.add('hidden');
+            if (shopOpenedFrom === 'pause') {
+                document.getElementById('pauseMenu').classList.remove('hidden');
+            } else if (shopOpenedFrom === 'gameOver') {
+                document.getElementById('gameOverScreen').classList.remove('hidden');
+            }
+            shopOpenedFrom = null;
         });
     }
     shopPanel && shopPanel.addEventListener('click', (e) => {
@@ -1180,10 +1315,15 @@ function init() {
         musicEnabled = !musicEnabled;
         saveSettings();
         updateSettingsUI();
-        if (!musicEnabled && isBossMusic) {
-            stopBossMusic();
-        } else if (musicEnabled && isBossWave) {
-            startBossMusic();
+        if (!musicEnabled) {
+            if (isBossMusic) stopBossMusic();
+            stopBgMusic();
+        } else if (gameRunning) {
+            if (isBossWave) {
+                startBossMusic();
+            } else {
+                startBgMusic();
+            }
         }
         playSound('click');
         vibrate(20);
@@ -1509,13 +1649,27 @@ function setupControls() {
 
     canvas.addEventListener('touchend', () => {
         isDragging = false;
-        
+
         // Hide highlight with delay
         if (playerHighlight) {
             setTimeout(() => {
                 playerHighlight.classList.add('hidden');
             }, 200);
         }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (['ArrowLeft', 'ArrowRight', 'a', 'd', 'A', 'D'].includes(e.key)) {
+            keysPressed[e.key] = true;
+        }
+    });
+
+    document.addEventListener('keyup', (e) => {
+        delete keysPressed[e.key];
+    });
+
+    window.addEventListener('blur', () => {
+        for (const k in keysPressed) delete keysPressed[k];
     });
 }
 
@@ -1607,14 +1761,16 @@ function startGame() {
             startTutorial();
         }, 500);
     }
-    
+
     lastTime = performance.now();
+    startBgMusic();
     requestAnimationFrame(gameLoop);
 }
 
 function gameOver() {
     gameRunning = false;
-    
+    isNewHighScore = false;
+
     // Reset screen shake
     screenShake.intensity = 0;
     screenShake.duration = 0;
@@ -1624,7 +1780,8 @@ function gameOver() {
     boss = null;
     isBossWave = false;
     stopBossMusic();
-    
+    stopBgMusic();
+
     // Update game statistics
     updateGameStats();
     
@@ -1633,6 +1790,7 @@ function gameOver() {
     const flooredScore = Math.floor(score);
     if (flooredScore > currentHighScore) {
         safeSetItem('highScore', flooredScore.toString());
+        isNewHighScore = true;
     }
     
     // Update game over screen
@@ -1750,6 +1908,15 @@ function update(deltaTime, currentTime) {
     if (isPaused) return;
     
     const dt = normalizeDelta(deltaTime);
+
+    const moveSpeed = 7;
+    if (keysPressed['ArrowLeft'] || keysPressed['a'] || keysPressed['A']) {
+        player.x = Math.max(0, player.x - moveSpeed * dt);
+    }
+    if (keysPressed['ArrowRight'] || keysPressed['d'] || keysPressed['D']) {
+        player.x = Math.min(canvas.width - player.width, player.x + moveSpeed * dt);
+    }
+
     const fireRate = Math.max(minFireRate, baseFireRate - score * 0.05);
     if (currentTime - lastShotTime >= fireRate && player.ammo > 0 && gameRunning) {
         shoot();
@@ -1788,15 +1955,30 @@ function update(deltaTime, currentTime) {
     });
     
     enemies = enemies.filter(enemy => {
-        enemy.y += enemy.speed * dt;
-        
-        // Add boss respawn logic:
-        if (enemy.type === 'BOSS') {
-            if (enemy.y > canvas.height - 50) {
-                // Boss passed player - respawn at top instead of getting stuck
-                enemy.y = -enemy.height - 20;
-                enemy.x = Math.random() * (canvas.width - enemy.width);
+        if (enemy.type === 'FAST') {
+            enemy.y += enemy.speed * dt;
+            enemy.x += Math.sin(enemy.y * 0.03 + enemy.phaseOffset) * enemy.amplitude * 0.03 * dt;
+            enemy.x = Math.max(0, Math.min(canvas.width - enemy.width, enemy.x));
+        } else if (enemy.type === 'TANK') {
+            enemy.y += enemy.speed * dt;
+            enemy.zigzagTimer += dt;
+            if (enemy.zigzagTimer > 60) {
+                enemy.zigzagDir *= -1;
+                enemy.zigzagTimer = 0;
             }
+            enemy.x += enemy.zigzagDir * 1.5 * dt;
+            enemy.x = Math.max(0, Math.min(canvas.width - enemy.width, enemy.x));
+        } else if (enemy.type === 'BOSS') {
+            if (enemy.y < enemy.targetY) {
+                enemy.y += enemy.speed * dt;
+            } else {
+                enemy.x += enemy.driftDir * 1.0 * dt;
+                if (enemy.x <= 0 || enemy.x + enemy.width >= canvas.width) {
+                    enemy.driftDir *= -1;
+                }
+            }
+        } else {
+            enemy.y += enemy.speed * dt;
         }
         
         if (checkCollision(player, enemy)) {
@@ -1958,7 +2140,8 @@ function checkWaveComplete() {
                 checkTutorialTriggers('boss_wave');
             } else {
                 showWaveAnnouncement(`WAVE ${currentWave}`, false);
-                stopBossMusic(); // Stop boss music when it's not a boss wave
+                stopBossMusic();
+                startBgMusic();
             }
         }, 2000);
     }
