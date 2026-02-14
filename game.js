@@ -22,7 +22,7 @@ const playerHighlight = document.getElementById('playerHighlight');
 const playerHighlightBox = document.getElementById('playerHighlightBox');
 
 function safeSetItem(key, value) {
-    try { safeSetItem(key, value); } catch (e) { /* storage full */ }
+    try { localStorage.setItem(key, value); } catch (e) { /* storage full */ }
 }
 
 // Shop system
@@ -390,6 +390,45 @@ let currentWave = 1;
 let enemiesRemaining = 0;
 let waveEnemiesToKill = 10;  // Start with 10 enemies per wave
 let isWaveComplete = false;
+
+// Gem reward constants
+const ENEMY_GEM_VALUES = { BASIC: 1, FAST: 2, TANK: 3, SHOOTER: 2, BOSS: 25 };
+const WAVE_CLEAR_GEM_BONUS = 10;
+let gemsEarnedThisGame = 0;
+
+// Kill streak system
+let killStreak = 0;
+let killStreakTimer = 0;
+const STREAK_DECAY_TIME = 3.0;
+const STREAK_TIERS = [
+    { kills: 5, multiplier: 2, label: 'x2 STREAK!' },
+    { kills: 10, multiplier: 3, label: 'x3 FRENZY!' },
+    { kills: 15, multiplier: 4, label: 'x4 UNSTOPPABLE!' }
+];
+
+function getStreakTier(streak) {
+    for (let i = STREAK_TIERS.length - 1; i >= 0; i--) {
+        if (streak >= STREAK_TIERS[i].kills) return STREAK_TIERS[i];
+    }
+    return null;
+}
+
+// Starfield
+let stars = [];
+
+function initStars() {
+    stars = [];
+    const count = graphicsQuality === 'low' ? 30 : 80;
+    for (let i = 0; i < count; i++) {
+        stars.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            speed: 0.5 + Math.random() * 1.5,
+            radius: 0.5 + Math.random() * 1.5,
+            brightness: 0.3 + Math.random() * 0.7
+        });
+    }
+}
 
 // Audio system functions
 function initAudio() {
@@ -1061,7 +1100,9 @@ const player = {
     maxAmmo: 30,
     speed: 5,
     color: '#4ecdc4',
-    gems: 0
+    gems: 0,
+    shieldTimer: 0,
+    rapidFireTimer: 0
 };
 
 let bullets = [];
@@ -1109,6 +1150,7 @@ function resizeCanvas() {
         player.x = canvas.width / 2 - player.width / 2;
     }
     player.y = canvas.height - player.height - 80;
+    initStars();
 }
 
 function updateHighScoreDisplay() {
@@ -1687,7 +1729,7 @@ function shoot() {
         vx: 0,
         vy: -12,
         radius: 5,
-        color: '#ff6b6b'
+        color: player.rapidFireTimer > 0 ? '#e67e22' : '#ff6b6b'
     };
     bullets.push(bullet);
     
@@ -1720,6 +1762,13 @@ function startGame() {
     enemySpawnAccumulator = 0;
     obstacleSpawnAccumulator = 0;
     powerupSpawnAccumulator = 0;
+
+    // Reset new systems
+    gemsEarnedThisGame = 0;
+    player.shieldTimer = 0;
+    player.rapidFireTimer = 0;
+    killStreak = 0;
+    killStreakTimer = 0;
     
     // Reset wave system
     currentWave = 1;
@@ -1784,6 +1833,11 @@ function gameOver() {
 
     // Update game statistics
     updateGameStats();
+
+    // Save gems earned
+    safeSetItem('playerGems', (player.gems || 0).toString());
+    const gemsEarnedEl = document.getElementById('gemsEarnedDisplay');
+    if (gemsEarnedEl) gemsEarnedEl.textContent = gemsEarnedThisGame;
     
     // Save high score
     const currentHighScore = parseInt(localStorage.getItem('highScore') || '0');
@@ -1869,8 +1923,17 @@ function spawnObstacle() {
 }
 
 function spawnPowerup() {
-    const types = ['health', 'ammo'];
-    const type = types[Math.floor(Math.random() * types.length)];
+    const roll = Math.random();
+    let type, color;
+    if (roll < 0.35) {
+        type = 'health'; color = '#2ecc71';
+    } else if (roll < 0.70) {
+        type = 'ammo'; color = '#3498db';
+    } else if (roll < 0.85) {
+        type = 'shield'; color = '#f1c40f';
+    } else {
+        type = 'rapidFire'; color = '#e67e22';
+    }
     const powerup = {
         x: Math.random() * (canvas.width - 25),
         y: -50,
@@ -1878,7 +1941,7 @@ function spawnPowerup() {
         height: 25,
         type: type,
         speed: 3,
-        color: type === 'health' ? '#2ecc71' : '#3498db'
+        color: color
     };
     powerups.push(powerup);
 }
@@ -1909,6 +1972,36 @@ function update(deltaTime, currentTime) {
     
     const dt = normalizeDelta(deltaTime);
 
+    // Shield timer countdown
+    if (player.shieldTimer > 0) {
+        player.shieldTimer -= deltaTime / 1000;
+        if (player.shieldTimer < 0) player.shieldTimer = 0;
+    }
+
+    // Rapid fire timer countdown
+    if (player.rapidFireTimer > 0) {
+        player.rapidFireTimer -= deltaTime / 1000;
+        if (player.rapidFireTimer < 0) player.rapidFireTimer = 0;
+    }
+
+    // Kill streak decay
+    if (killStreak > 0) {
+        killStreakTimer += deltaTime / 1000;
+        if (killStreakTimer >= STREAK_DECAY_TIME) {
+            killStreak = 0;
+            killStreakTimer = 0;
+        }
+    }
+
+    // Update stars
+    for (const star of stars) {
+        star.y += star.speed * dt;
+        if (star.y > canvas.height) {
+            star.y = 0;
+            star.x = Math.random() * canvas.width;
+        }
+    }
+
     const moveSpeed = 7;
     if (keysPressed['ArrowLeft'] || keysPressed['a'] || keysPressed['A']) {
         player.x = Math.max(0, player.x - moveSpeed * dt);
@@ -1917,7 +2010,8 @@ function update(deltaTime, currentTime) {
         player.x = Math.min(canvas.width - player.width, player.x + moveSpeed * dt);
     }
 
-    const fireRate = Math.max(minFireRate, baseFireRate - score * 0.05);
+    let fireRate = Math.max(minFireRate, baseFireRate - score * 0.05);
+    if (player.rapidFireTimer > 0) fireRate *= 0.5;
     if (currentTime - lastShotTime >= fireRate && player.ammo > 0 && gameRunning) {
         shoot();
         lastShotTime = currentTime;
@@ -1982,7 +2076,7 @@ function update(deltaTime, currentTime) {
         }
         
         if (checkCollision(player, enemy)) {
-            player.health -= enemy.damage;
+            if (player.shieldTimer <= 0) player.health -= enemy.damage;
             createParticles(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, 20, enemy.color);
             updateUI();
             triggerScreenShake(35, 10);
@@ -2002,7 +2096,24 @@ function update(deltaTime, currentTime) {
                 vibrate(30);
                 playSound('hit');
                 if (enemy.health <= 0) {
-                    score += enemy.scoreValue;
+                    // Kill streak
+                    killStreak++;
+                    killStreakTimer = 0;
+                    const tier = getStreakTier(killStreak);
+                    const mult = tier ? tier.multiplier : 1;
+
+                    score += enemy.scoreValue * mult;
+                    const gemReward = (ENEMY_GEM_VALUES[enemy.type] || 1) * mult;
+                    player.gems += gemReward;
+                    gemsEarnedThisGame += gemReward;
+
+                    // Streak tier announcement
+                    if (tier && killStreak === tier.kills) {
+                        showTutorialHint(tier.label);
+                        createParticles(player.x + player.width / 2, player.y, 30, '#f39c12');
+                        playSound('powerup');
+                    }
+
                     enemiesKilledInGame++;
                     enemiesRemaining--;
 
@@ -2044,7 +2155,7 @@ function update(deltaTime, currentTime) {
         obstacle.y += obstacle.speed * dt;
         
         if (checkCollision(player, obstacle)) {
-            player.health -= 30;
+            if (player.shieldTimer <= 0) player.health -= 30;
             createParticles(obstacle.x + obstacle.width / 2, obstacle.y + obstacle.height / 2, 10, obstacle.color);
             updateUI();
             triggerScreenShake(25, 8);
@@ -2064,6 +2175,10 @@ function update(deltaTime, currentTime) {
                 player.health = Math.min(player.maxHealth, player.health + 30);
             } else if (powerup.type === 'ammo') {
                 player.ammo = Math.min(player.maxAmmo, player.ammo + 10);
+            } else if (powerup.type === 'shield') {
+                player.shieldTimer = 5.0;
+            } else if (powerup.type === 'rapidFire') {
+                player.rapidFireTimer = 5.0;
             }
             createParticles(powerup.x + powerup.width / 2, powerup.y + powerup.height / 2, 10, powerup.color);
             
@@ -2111,7 +2226,9 @@ function checkBulletCollision(bullet, enemy) {
 function checkWaveComplete() {
     if (enemiesRemaining <= 0 && !isWaveComplete) {
         isWaveComplete = true;
-        
+        player.gems += WAVE_CLEAR_GEM_BONUS;
+        gemsEarnedThisGame += WAVE_CLEAR_GEM_BONUS;
+
         setTimeout(() => {
             currentWave++;
             const newConfig = getWaveConfig(currentWave);
@@ -2181,7 +2298,15 @@ function draw() {
     
     ctx.fillStyle = '#0f0f1a';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
+
+    // Draw stars
+    for (const star of stars) {
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 255, 255, ${star.brightness})`;
+        ctx.fill();
+    }
+
     // Draw player with optional glow
     if (graphicsQuality === 'high') {
         ctx.shadowBlur = 20;
@@ -2200,7 +2325,19 @@ function draw() {
     ctx.fillRect(player.x + player.width - 15, player.y + 10, 15, 8);
     ctx.fillStyle = player.color;
     ctx.fillRect(player.x + player.width - 10, player.y + 5, 5, 5);
-    
+
+    // Draw shield effect
+    if (player.shieldTimer > 0) {
+        ctx.strokeStyle = '#f1c40f';
+        ctx.lineWidth = 2;
+        ctx.globalAlpha = 0.5 + 0.3 * Math.sin(Date.now() * 0.01);
+        ctx.beginPath();
+        ctx.arc(player.x + player.width / 2, player.y + player.height / 2,
+                Math.max(player.width, player.height) * 0.7, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+    }
+
     bullets.forEach(bullet => {
         ctx.beginPath();
         ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2);
@@ -2279,7 +2416,8 @@ function draw() {
         ctx.fillStyle = 'white';
         ctx.font = '14px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText(powerup.type === 'health' ? '+' : 'A', powerup.x + powerup.width / 2, powerup.y + powerup.height / 2 + 5);
+        const label = powerup.type === 'health' ? '+' : powerup.type === 'ammo' ? 'A' : powerup.type === 'shield' ? 'S' : 'R';
+        ctx.fillText(label, powerup.x + powerup.width / 2, powerup.y + powerup.height / 2 + 5);
     });
     
     particles.forEach(particle => {
@@ -2308,6 +2446,19 @@ function draw() {
         return false;
     });
     
+    // Draw kill streak multiplier
+    if (killStreak >= 5) {
+        const tier = getStreakTier(killStreak);
+        if (tier) {
+            ctx.save();
+            ctx.fillStyle = '#f39c12';
+            ctx.font = 'bold 20px Arial';
+            ctx.textAlign = 'right';
+            ctx.fillText(tier.label, canvas.width - 10, 80);
+            ctx.restore();
+        }
+    }
+
     ctx.restore();  // End of shake translation
 }
 
