@@ -611,6 +611,7 @@ html, body {
 
 #settingsPanel {
     background: rgba(0, 0, 0, 0.9);
+    z-index: 15;
 }
 
 .settings-content {
