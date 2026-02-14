@@ -1,0 +1,25 @@
+name: Lighthouse Audit
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start local server
+        run: npx http-server@latest . -p 8080 &
+
+      - name: Wait for server
+        run: sleep 3
+
+      - name: Run Lighthouse
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          urls: http://localhost:8080/
+          configPath: .github/lighthouse/lighthouserc.json
+          runs: 3
+          uploadArtifacts: true

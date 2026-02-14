@@ -1,24 +1,24 @@
 const CACHE_NAME = 'pew-run-v1';
 const ASSETS = [
-    '/',
-    '/index.html',
-    '/game.js',
-    '/style.css',
-    '/manifest.json',
-    '/privacy-policy.html',
-    '/icons/icon-48.png',
-    '/icons/icon-72.png',
-    '/icons/icon-96.png',
-    '/icons/icon-120.png',
-    '/icons/icon-144.png',
-    '/icons/icon-152.png',
-    '/icons/icon-167.png',
-    '/icons/icon-180.png',
-    '/icons/icon-192.png',
-    '/icons/icon-512.png',
-    '/icons/icon-192-maskable.png',
-    '/icons/icon-512-maskable.png',
-    '/icons/splash.svg'
+    './',
+    './index.html',
+    './game.js',
+    './style.css',
+    './manifest.json',
+    './privacy-policy.html',
+    './icons/icon-48.png',
+    './icons/icon-72.png',
+    './icons/icon-96.png',
+    './icons/icon-120.png',
+    './icons/icon-144.png',
+    './icons/icon-152.png',
+    './icons/icon-167.png',
+    './icons/icon-180.png',
+    './icons/icon-192.png',
+    './icons/icon-512.png',
+    './icons/icon-192-maskable.png',
+    './icons/icon-512-maskable.png',
+    './icons/splash.svg'
 ];
 
 self.addEventListener('install', event => {

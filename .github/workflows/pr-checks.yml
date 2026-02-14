@@ -1,0 +1,17 @@
+name: PR Checks
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: JS syntax check
+        run: node -c game.js && node -c service-worker.js
+
+      - name: HTML validation
+        run: npx html-validate@latest index.html privacy-policy.html
