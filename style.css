@@ -690,6 +690,7 @@ html, body {
 /* How to Play Panel */
 #howToPlayPanel {
     background: rgba(0, 0, 0, 0.9);
+    z-index: 15;
 }
 
 .how-to-play-content {
@@ -763,6 +764,11 @@ html, body {
     border-right: 14px solid transparent;
     border-bottom: 28px solid #e67e22;
     border-radius: 0;
+}
+
+#howToPlayBtn,
+#pauseHowToPlayBtn {
+    margin-top: 10px;
 }
 
 /* Daily Rewards Panel */
