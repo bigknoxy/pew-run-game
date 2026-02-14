@@ -1358,6 +1358,11 @@ function init() {
     settingsBtn.addEventListener('click', () => {
         initAudio();
         playSound('click');
+        if (gameRunning && !isPaused) {
+            isPaused = true;
+            stopBgMusic();
+            if (isBossMusic) stopBossMusic();
+        }
         settingsPanel.classList.remove('hidden');
     });
 
@@ -1365,6 +1370,14 @@ function init() {
     closeSettingsBtn.addEventListener('click', () => {
         playSound('click');
         settingsPanel.classList.add('hidden');
+        if (gameRunning && isPaused && pauseMenu.classList.contains('hidden')) {
+            isPaused = false;
+            if (isBossWave) {
+                startBossMusic();
+            } else {
+                startBgMusic();
+            }
+        }
     });
 
     // How to Play panel
