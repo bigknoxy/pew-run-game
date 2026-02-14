@@ -1,3 +1,4 @@
+// Pew Run v1.0
 // Global error handler
 window.onerror = function(msg, src, line, col, err) {
     if (document.getElementById('globalErrorOverlay')) return false;
