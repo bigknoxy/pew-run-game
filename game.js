@@ -1,5 +1,28 @@
+// Global error handler
+window.onerror = function(msg, src, line, col, err) {
+    if (document.getElementById('globalErrorOverlay')) return false;
+    const overlay = document.getElementById('game-container');
+    if (overlay) {
+        const errorDiv = document.createElement('div');
+        errorDiv.id = 'globalErrorOverlay';
+        errorDiv.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1a1a2e;color:#fff;padding:20px;border-radius:10px;text-align:center;z-index:9999;font-family:Arial,sans-serif';
+        errorDiv.innerHTML = '<h2>Something went wrong</h2><p>Please refresh the page to try again.</p>';
+        const btn = document.createElement('button');
+        btn.textContent = 'REFRESH';
+        btn.style.cssText = 'padding:10px 20px;font-size:16px;cursor:pointer;background:#4ecdc4;border:none;border-radius:5px;color:#fff;margin-top:10px';
+        btn.addEventListener('click', function() { location.reload(); });
+        errorDiv.appendChild(btn);
+        overlay.appendChild(errorDiv);
+    }
+    return false;
+};
+
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
+if (!ctx) {
+    document.getElementById('game-container').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;color:#fff;font-family:Arial,sans-serif;text-align:center;padding:20px"><div><h2>Unsupported Browser</h2><p>Your browser does not support HTML5 Canvas. Please update your browser.</p></div></div>';
+    throw new Error('Canvas 2D context not supported');
+}
 const scoreEl = document.getElementById('scoreValue');
 const healthEl = document.getElementById('healthValue');
 const ammoEl = document.getElementById('ammoValue');
@@ -432,6 +455,7 @@ function initStars() {
 
 // Audio system functions
 function initAudio() {
+    if (!window.AudioContext && !window.webkitAudioContext) return;
     if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     }

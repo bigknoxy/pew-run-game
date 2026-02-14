@@ -28,7 +28,9 @@
 
     <!-- Theme Color -->
     <meta name="theme-color" content="#4ecdc4">
-    
+    <meta name="description" content="Pew Run - A fast-paced 2D space shooter. Dodge obstacles, collect power-ups, and fight bosses in this action-packed arcade game.">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'">
+
     <link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
@@ -62,9 +64,9 @@
             <span>TUTORIAL</span>
         </div>
         <!-- Add pause button (positioned in corner for easy access) -->
-        <button id="pauseBtn" class="hidden">⏸️</button>
-        <button id="soundBtn" class="hidden">🔊</button>
-        <button id="musicBtn" class="hidden">🎵</button>
+        <button id="pauseBtn" class="hidden" aria-label="Pause">⏸️</button>
+        <button id="soundBtn" class="hidden" aria-label="Toggle sound">🔊</button>
+        <button id="musicBtn" class="hidden" aria-label="Toggle music">🎵</button>
         <!-- Add wave announcement overlay (positioned after pause button for proper z-index) -->
         <div id="waveAnnouncement" class="wave-overlay hidden">
             <div class="wave-content">
@@ -74,9 +76,9 @@
             </div>
         </div>
         <!-- Settings Button -->
-        <button id="settingsBtn" class="hidden">⚙️</button>
+        <button id="settingsBtn" class="hidden" aria-label="Settings">⚙️</button>
         <!-- Daily Rewards Button -->
-        <button id="dailyRewardsBtn" class="hidden">🎁</button>
+        <button id="dailyRewardsBtn" class="hidden" aria-label="Daily rewards">🎁</button>
 
         <!-- Settings Panel -->
         <div id="settingsPanel" class="overlay hidden">
@@ -104,7 +106,7 @@
                 </div>
                 
                 <div class="setting-row">
-                    <a href="/privacy-policy.html" id="privacyLink">Privacy Policy</a>
+                    <a href="/privacy-policy.html" id="privacyLink" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
                 </div>
                 
                 <button id="closeSettingsBtn" class="close-btn">CLOSE</button>

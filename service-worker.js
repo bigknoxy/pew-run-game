@@ -17,7 +17,8 @@ const ASSETS = [
     '/icons/icon-192.png',
     '/icons/icon-512.png',
     '/icons/icon-192-maskable.png',
-    '/icons/icon-512-maskable.png'
+    '/icons/icon-512-maskable.png',
+    '/icons/splash.svg'
 ];
 
 self.addEventListener('install', event => {
@@ -37,16 +38,34 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
-    event.respondWith(
-        caches.match(event.request).then(cached => {
-            const fetchPromise = fetch(event.request).then(response => {
+    const url = event.request.url;
+    const isNavigate = event.request.mode === 'navigate';
+    const isHTMLorJS = url.endsWith('.html') || url.endsWith('.js');
+
+    if (isNavigate || isHTMLorJS) {
+        // Network-first for HTML and JS files
+        event.respondWith(
+            fetch(event.request).then(response => {
                 if (response.ok) {
                     const clone = response.clone();
                     caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
                 }
                 return response;
-            }).catch(() => cached);
-            return cached || fetchPromise;
-        })
-    );
+            }).catch(() => caches.match(event.request))
+        );
+    } else {
+        // Cache-first for everything else (images, CSS, icons)
+        event.respondWith(
+            caches.match(event.request).then(cached => {
+                if (cached) return cached;
+                return fetch(event.request).then(response => {
+                    if (response.ok) {
+                        const clone = response.clone();
+                        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+                    }
+                    return response;
+                });
+            })
+        );
+    }
 });
