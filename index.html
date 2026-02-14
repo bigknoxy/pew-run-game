@@ -113,6 +113,62 @@
             </div>
         </div>
 
+        <!-- How to Play Panel -->
+        <div id="howToPlayPanel" class="overlay hidden">
+            <div class="how-to-play-content">
+                <h2>HOW TO PLAY</h2>
+
+                <div class="htp-section">
+                    <h3>CONTROLS</h3>
+                    <p>Drag to move · Auto-fire is always on</p>
+                </div>
+
+                <div class="htp-section">
+                    <h3>POWER-UPS</h3>
+                    <div class="htp-items">
+                        <div class="htp-item">
+                            <span class="htp-icon" style="background:#2ecc71">+</span>
+                            <span>Health (+30 HP)</span>
+                        </div>
+                        <div class="htp-item">
+                            <span class="htp-icon" style="background:#3498db">A</span>
+                            <span>Ammo (+10)</span>
+                        </div>
+                        <div class="htp-item">
+                            <span class="htp-icon" style="background:#f1c40f">S</span>
+                            <span>Shield (blocks 1 hit)</span>
+                        </div>
+                        <div class="htp-item">
+                            <span class="htp-icon" style="background:#e67e22">R</span>
+                            <span>Rapid Fire (2x speed)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="htp-section">
+                    <h3>OBSTACLES</h3>
+                    <div class="htp-items">
+                        <div class="htp-item">
+                            <span class="htp-icon htp-box"></span>
+                            <span>Crate (30 damage)</span>
+                        </div>
+                        <div class="htp-item">
+                            <span class="htp-icon htp-spike"></span>
+                            <span>Spike (30 damage)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="htp-section">
+                    <h3>ENEMIES</h3>
+                    <p>Basic → Fast → Tank → Shooter</p>
+                    <p>Boss every 5 waves</p>
+                </div>
+
+                <button id="closeHowToPlayBtn" class="close-btn">CLOSE</button>
+            </div>
+        </div>
+
         <!-- Daily Rewards Panel -->
         <div id="dailyRewardsPanel" class="overlay hidden">
             <div class="daily-rewards-content">
@@ -208,6 +264,7 @@
                 <button id="restartFromPauseBtn">RESTART</button>
                 <button id="quitBtn">QUIT TO MENU</button>
                 <button id="pauseShopBtn" class="shop-open-btn">SHOP</button>
+                <button id="pauseHowToPlayBtn">HOW TO PLAY</button>
             </div>
         </div>
         <!-- Add boss health bar -->
@@ -223,6 +280,7 @@
            <p>High Score: <span id="startHighScore">0</span></p>
             <button id="startBtn">START</button>
             <button id="shopBtn" class="shop-open-btn">SHOP</button>
+            <button id="howToPlayBtn">HOW TO PLAY</button>
         </div>
         <div id="gameOverScreen" class="overlay hidden">
             <h1>GAME OVER</h1>

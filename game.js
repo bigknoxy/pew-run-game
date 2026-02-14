@@ -1367,6 +1367,23 @@ function init() {
         settingsPanel.classList.add('hidden');
     });
 
+    // How to Play panel
+    const howToPlayPanel = document.getElementById('howToPlayPanel');
+    const closeHowToPlayBtn = document.getElementById('closeHowToPlayBtn');
+    document.getElementById('howToPlayBtn').addEventListener('click', () => {
+        initAudio();
+        playSound('click');
+        howToPlayPanel.classList.remove('hidden');
+    });
+    document.getElementById('pauseHowToPlayBtn').addEventListener('click', () => {
+        playSound('click');
+        howToPlayPanel.classList.remove('hidden');
+    });
+    closeHowToPlayBtn.addEventListener('click', () => {
+        playSound('click');
+        howToPlayPanel.classList.add('hidden');
+    });
+
     // Sound toggle
     soundToggle.addEventListener('click', () => {
         soundEnabled = !soundEnabled;

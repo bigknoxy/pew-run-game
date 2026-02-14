@@ -687,6 +687,84 @@ html, body {
     background: rgba(255,255,255,0.1);
 }
 
+/* How to Play Panel */
+#howToPlayPanel {
+    background: rgba(0, 0, 0, 0.9);
+}
+
+.how-to-play-content {
+    text-align: center;
+    padding: 20px;
+    max-width: 320px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.how-to-play-content h2 {
+    font-size: 32px;
+    color: #4ecdc4;
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 4px;
+}
+
+.htp-section {
+    margin-bottom: 18px;
+}
+
+.htp-section h3 {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.5);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+}
+
+.htp-section p {
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.htp-items {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.htp-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.htp-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: bold;
+    color: white;
+    flex-shrink: 0;
+}
+
+.htp-box {
+    background: #888;
+    border-radius: 4px;
+}
+
+.htp-spike {
+    background: transparent;
+    width: 0;
+    height: 0;
+    border-left: 14px solid transparent;
+    border-right: 14px solid transparent;
+    border-bottom: 28px solid #e67e22;
+    border-radius: 0;
+}
+
 /* Daily Rewards Panel */
 #dailyRewardsPanel {
     background: rgba(0, 0, 0, 0.9);
