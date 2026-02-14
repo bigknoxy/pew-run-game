@@ -205,6 +205,7 @@
                 <button id="resumeBtn">RESUME</button>
                 <button id="restartFromPauseBtn">RESTART</button>
                 <button id="quitBtn">QUIT TO MENU</button>
+                <button id="pauseShopBtn" class="shop-open-btn">SHOP</button>
             </div>
         </div>
         <!-- Add boss health bar -->
@@ -223,6 +224,7 @@
         </div>
         <div id="gameOverScreen" class="overlay hidden">
             <h1>GAME OVER</h1>
+            <div id="newHighScoreEl" class="new-high-score hidden">NEW HIGH SCORE!</div>
             <p>Score: <span id="finalScore">0</span></p>
             <p>High Score: <span id="highScoreDisplay">0</span></p>
             <p>Wave Reached: <span id="waveReachedDisplay">1</span></p>
@@ -230,6 +232,7 @@
             <p>Total Games: <span id="totalGamesDisplay">0</span></p>
             <p>Total Enemies: <span id="totalEnemiesDisplay">0</span></p>
             <button id="restartBtn">RESTART</button>
+            <button id="gameOverShopBtn" class="shop-open-btn">SHOP</button>
         </div>
 
         <!-- Revive Prompt -->
