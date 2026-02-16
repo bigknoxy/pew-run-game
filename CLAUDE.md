@@ -4,14 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Running the Project
 
+**ALWAYS use port 8000** — it is the only port open on the firewall. If port 8000 is occupied, kill the existing process first (`kill $(lsof -t -i:8000)`), then start the server.
+
 ```bash
-bash start.sh
-# Or directly:
 python3 -m http.server 8000
 # Access at http://localhost:8000
 ```
 
 No build step, bundler, or package manager — all files are served directly. No linter is configured.
+
+**IMPORTANT: After completing any code change, always (re)start the dev server on port 8000 so the user can immediately test.**
 
 ## Testing
 
