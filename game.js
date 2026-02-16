@@ -995,30 +995,23 @@ function getWaveConfig(waveNumber) {
     // Calculate composition based on tier
     let baseCount = Math.min(80, 10 + (waveNumber - 1) * 3);
     let composition = [];
-    
-    // Always have basic enemies
-    composition.push({ type: 'BASIC', count: Math.floor(baseCount * 0.5) });
-    
-    // Add fast enemies (unlock wave 3)
-    if (waveNumber >= 3) {
-        composition.push({ type: 'FAST', count: Math.floor(baseCount * 0.3) });
-    }
-    
-    // Add tanks (unlock wave 6)
-    if (waveNumber >= 6) {
-        composition.push({ type: 'TANK', count: Math.floor(baseCount * 0.15) });
-    }
-    
-    // Add shooters (unlock wave 9)
-    if (waveNumber >= 9) {
-        composition.push({ type: 'SHOOTER', count: Math.floor(baseCount * 0.1) });
-    }
+
+    // Determine unlocked enemy shares — unlocked shares go to BASIC
+    let fastShare = waveNumber >= 3 ? 0.3 : 0;
+    let tankShare = waveNumber >= 6 ? 0.15 : 0;
+    let shooterShare = waveNumber >= 9 ? 0.1 : 0;
+    let basicShare = 1.0 - fastShare - tankShare - shooterShare;
+
+    composition.push({ type: 'BASIC', count: Math.floor(baseCount * basicShare) });
+    if (fastShare > 0) composition.push({ type: 'FAST', count: Math.floor(baseCount * fastShare) });
+    if (tankShare > 0) composition.push({ type: 'TANK', count: Math.floor(baseCount * tankShare) });
+    if (shooterShare > 0) composition.push({ type: 'SHOOTER', count: Math.floor(baseCount * shooterShare) });
     
     return {
         isBossWave: false,
         composition: composition,
         speedMultiplier: Math.min(3.0, 1.0 + (waveNumber - 1) * 0.05),
-        spawnRateMultiplier: Math.max(0.5, 1.0 - (waveNumber - 1) * 0.02)
+        spawnRateMultiplier: Math.max(0.8, 1.0 - (waveNumber - 1) * 0.01)
     };
 }
 
@@ -1108,6 +1101,7 @@ const FRAME_TIME = 1000 / TARGET_FPS;
 let enemySpawnAccumulator = 0;
 let obstacleSpawnAccumulator = 0;
 let powerupSpawnAccumulator = 0;
+let ammoRegenAccumulator = 0;
 
 function normalizeDelta(deltaTime) {
     return deltaTime / FRAME_TIME;  // Returns ~1.0 at 60fps
@@ -1120,8 +1114,8 @@ const player = {
     height: 60,
     health: 100,
     maxHealth: 100,
-    ammo: 30,
-    maxAmmo: 30,
+    ammo: 40,
+    maxAmmo: 40,
     speed: 5,
     color: '#4ecdc4',
     gems: 0,
@@ -1816,6 +1810,7 @@ function startGame() {
     enemySpawnAccumulator = 0;
     obstacleSpawnAccumulator = 0;
     powerupSpawnAccumulator = 0;
+    ammoRegenAccumulator = 0;
 
     // Reset new systems
     gemsEarnedThisGame = 0;
@@ -2038,6 +2033,16 @@ function update(deltaTime, currentTime) {
         if (player.rapidFireTimer < 0) player.rapidFireTimer = 0;
     }
 
+    // Passive ammo regeneration (+1 every 2 seconds)
+    ammoRegenAccumulator += deltaTime / 1000;
+    if (ammoRegenAccumulator >= 2.0) {
+        ammoRegenAccumulator -= 2.0;
+        if (player.ammo < player.maxAmmo) {
+            player.ammo = Math.min(player.maxAmmo, player.ammo + 1);
+            updateUI();
+        }
+    }
+
     // Kill streak decay
     if (killStreak > 0) {
         killStreakTimer += deltaTime / 1000;
@@ -2228,7 +2233,7 @@ function update(deltaTime, currentTime) {
             if (powerup.type === 'health') {
                 player.health = Math.min(player.maxHealth, player.health + 30);
             } else if (powerup.type === 'ammo') {
-                player.ammo = Math.min(player.maxAmmo, player.ammo + 10);
+                player.ammo = Math.min(player.maxAmmo, player.ammo + 15);
             } else if (powerup.type === 'shield') {
                 player.shieldTimer = 5.0;
             } else if (powerup.type === 'rapidFire') {
@@ -2282,6 +2287,7 @@ function checkWaveComplete() {
         isWaveComplete = true;
         player.gems += WAVE_CLEAR_GEM_BONUS;
         gemsEarnedThisGame += WAVE_CLEAR_GEM_BONUS;
+        player.ammo = Math.min(player.maxAmmo, player.ammo + 5);
 
         setTimeout(() => {
             currentWave++;
