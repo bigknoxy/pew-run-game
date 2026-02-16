@@ -354,57 +354,6 @@ html, body {
 
 .wave-content {
     text-align: center;
-    animation: waveSlideIn 0.3s ease-out;
-}
-
-@keyframes waveSlideIn {
-    0% {
-        transform: translateY(-10px);
-        opacity: 0;
-    }
-    100% {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
-.wave-title {
-    font-size: 14px;
-    font-weight: normal;
-    color: rgba(255, 255, 255, 0.6);
-    text-transform: uppercase;
-    letter-spacing: 0.15em;
-    margin: 0;
-}
-
-.wave-number {
-    font-size: 24px;
-    font-weight: bold;
-    background: linear-gradient(135deg, rgba(255, 107, 107, 0.8), rgba(243, 156, 18, 0.8));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    margin: 0 0 0 8px;
-    text-shadow: none;
-    animation: waveNumberPulse 2s ease-in-out infinite;
-    line-height: 1;
-}
-
-@keyframes waveNumberPulse {
-    0%, 100% {
-        transform: scale(1);
-    }
-    50% {
-        transform: scale(1.05);
-    }
-}
-
-.wave-overlay:not(.hidden) {
-    opacity: 1;
-}
-
-.wave-content {
-    text-align: center;
     animation: wavePopIn 0.5s ease-out;
 }
 

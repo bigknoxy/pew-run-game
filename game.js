@@ -471,6 +471,7 @@ let currentWave = 1;
 let enemiesRemaining = 0;
 let waveEnemiesToKill = 10;  // Start with 10 enemies per wave
 let isWaveComplete = false;
+let cachedWaveConfig = null;
 
 // Gem reward constants
 const ENEMY_GEM_VALUES = { BASIC: 1, FAST: 2, TANK: 3, SHOOTER: 2, BOSS: 25 };
@@ -1116,14 +1117,6 @@ function createEnemy(type) {
     return enemy;
 }
 
-function spawnEnemyFromConfig(type, count, speedMult) {
-    for (let i = 0; i < count; i++) {
-        const enemy = createEnemy(type);
-        enemy.speed *= speedMult;
-        enemies.push(enemy);
-    }
-}
-
 function showBossHealthBar() {
     const bar = document.getElementById('bossHealthBar');
     if (bar) {
@@ -1300,6 +1293,7 @@ function quitToMenu() {
     stopBossMusic();
     isPaused = false;
     pauseMenu.classList.add('hidden');
+    usedReviveThisGame = true; // Skip revive prompt when quitting
     gameOver();
     // Show start screen
     document.getElementById('startScreen').classList.remove('hidden');
@@ -1553,17 +1547,6 @@ function init() {
         }
     });
 
-    // Update daily rewards button visibility
-    function updateDailyRewardsButtonVisibility() {
-        if (dailyRewardsBtn) {
-            if (gameRunning) {
-                dailyRewardsBtn.classList.add('hidden');
-            } else {
-                checkDailyRewardAvailability();
-            }
-        }
-    }
-    
     // Add keyboard shortcuts
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') {
@@ -1942,6 +1925,7 @@ function startGame() {
     
     // Initialize first wave with new system
     const firstWaveConfig = getWaveConfig(1);
+    cachedWaveConfig = firstWaveConfig;
     isBossWave = firstWaveConfig.isBossWave;
     spawnRateMultiplier = firstWaveConfig.spawnRateMultiplier;
     enemySpeedMultiplier = firstWaveConfig.speedMultiplier;
@@ -1966,12 +1950,13 @@ function startGame() {
     updateSettingsButtonVisibility();
     updateSoundButtonVisibility();
     
+    // Check if tutorial needed (must be before marking as played)
+    const showTutorial = needsTutorial();
+
     // Mark as played
     safeSetItem('hasPlayed', 'true');
-    
-    // Check if tutorial needed
-    if (needsTutorial()) {
-        // Start tutorial mode
+
+    if (showTutorial) {
         setTimeout(() => {
             startTutorial();
         }, 500);
@@ -2056,14 +2041,11 @@ function spawnEnemy() {
         return;
     }
     
-    // Determine which enemy type to spawn based on remaining in wave
-    const waveConfig = getWaveConfig(currentWave);
-    
     // Weighted random selection from composition
-    const totalWeight = waveConfig.composition.reduce((sum, g) => sum + g.count, 0);
+    const totalWeight = config.composition.reduce((sum, g) => sum + g.count, 0);
     let roll = Math.random() * totalWeight;
-    let selectedType = waveConfig.composition[0].type;
-    for (const group of waveConfig.composition) {
+    let selectedType = config.composition[0].type;
+    for (const group of config.composition) {
         roll -= group.count;
         if (roll <= 0) {
             selectedType = group.type;
@@ -2071,7 +2053,7 @@ function spawnEnemy() {
         }
     }
     const enemy = createEnemy(selectedType);
-    enemy.speed *= waveConfig.speedMultiplier;
+    enemy.speed *= config.speedMultiplier;
     enemies.push(enemy);
     enemiesRemaining--;
 }
@@ -2226,8 +2208,7 @@ function update(deltaTime, currentTime) {
         enemySpawnAccumulator = 0;  // Reset accumulator
     } else {
         // Use new wave system spawn rate
-        const currentConfig = getWaveConfig(currentWave);
-        enemySpawnAccumulator += (0.02 + score * 0.00001) * currentConfig.spawnRateMultiplier * dt;
+        enemySpawnAccumulator += (0.02 + score * 0.00001) * (cachedWaveConfig ? cachedWaveConfig.spawnRateMultiplier : 1) * dt;
         if (enemySpawnAccumulator >= 1) {
             spawnEnemy();
             enemySpawnAccumulator = 0;
@@ -2388,7 +2369,13 @@ function update(deltaTime, currentTime) {
             }
         }
         
-        return enemy.y < canvas.height + enemy.height && enemy.health > 0;
+        const alive = enemy.y < canvas.height + enemy.height && enemy.health > 0;
+        if (!alive && enemy.health > 0 && enemy.type !== 'BOSS') {
+            // Enemy went off-screen — decrement so wave can still complete
+            enemiesRemaining--;
+            if (enemiesRemaining <= 0) checkWaveComplete();
+        }
+        return alive;
     });
     
     obstacles = obstacles.filter(obstacle => {
@@ -2493,7 +2480,8 @@ function checkWaveComplete() {
         setTimeout(() => {
             currentWave++;
             const newConfig = getWaveConfig(currentWave);
-            
+            cachedWaveConfig = newConfig;
+
             // Reset for next wave
             isWaveComplete = false;
             isBossWave = newConfig.isBossWave;
@@ -2772,15 +2760,16 @@ function draw() {
 
     // Low-health vignette (red pulsing edges)
     if (player.health < 30 && player.health > 0 && graphicsQuality !== 'low') {
-        const alpha = 0.2 + 0.1 * Math.sin(Date.now() * 0.005);
         const grad = ctx.createRadialGradient(
             canvas.width / 2, canvas.height / 2, canvas.height * 0.3,
             canvas.width / 2, canvas.height / 2, canvas.height * 0.8
         );
         grad.addColorStop(0, 'transparent');
-        grad.addColorStop(1, `rgba(255, 0, 0, ${alpha})`);
+        grad.addColorStop(1, 'rgba(255, 0, 0, 0.6)');
+        ctx.globalAlpha = 0.2 + 0.1 * Math.sin(Date.now() * 0.005);
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.globalAlpha = 1;
     }
 }
 
