@@ -50,15 +50,21 @@ function safeSetItem(key, value) {
 
 // Shop system
 const SKIN_COLORS = { default: '#4ecdc4', red: '#ff6b6b', gold: '#f39c12', purple: '#9b59b6' };
-let shopData = { revives: 0, ammoBoost: false, skins: { red: false, gold: false, purple: false }, activeSkin: 'default' };
+let shopData = { revives: 0, ammoBoost: false, skins: { red: false, gold: false, purple: false }, activeSkin: 'default', weapon: 'default', ownedWeapons: ['default'], magnet: false, startingShield: false };
 let usedReviveThisGame = false;
 let reviveTimerInterval = null;
 
 function loadShopData() {
     const saved = localStorage.getItem('shopData');
     if (saved) {
-        try { shopData = JSON.parse(saved); } catch(e) {}
+        try {
+            const parsed = JSON.parse(saved);
+            shopData = Object.assign(shopData, parsed);
+        } catch(e) {}
     }
+    // Ensure new keys have defaults
+    if (!shopData.weapon) shopData.weapon = 'default';
+    if (!shopData.ownedWeapons) shopData.ownedWeapons = ['default'];
 }
 
 function saveShopData() {
@@ -76,6 +82,15 @@ function buyShopItem(item, cost) {
         const skinName = item.replace('skin_', '');
         shopData.skins[skinName] = true;
         shopData.activeSkin = skinName;
+    } else if (item.startsWith('weapon_')) {
+        const weaponName = item.replace('weapon_', '');
+        if (!shopData.ownedWeapons) shopData.ownedWeapons = ['default'];
+        if (!shopData.ownedWeapons.includes(weaponName)) shopData.ownedWeapons.push(weaponName);
+        shopData.weapon = weaponName;
+    } else if (item === 'magnet') {
+        shopData.magnet = true;
+    } else if (item === 'startingShield') {
+        shopData.startingShield = true;
     }
     saveShopData();
     safeSetItem('playerGems', player.gems.toString());
@@ -112,6 +127,24 @@ function updateShopUI() {
         }
     }
 
+    // Update weapon status
+    const ownedWeapons = shopData.ownedWeapons || ['default'];
+    const weaponMap = { spread: 'weaponSpreadStatus', piercing: 'weaponPiercingStatus' };
+    for (const [wep, elId] of Object.entries(weaponMap)) {
+        const el = document.getElementById(elId);
+        if (el) {
+            if (ownedWeapons.includes(wep) && (shopData.weapon || 'default') === wep) el.textContent = 'Equipped';
+            else if (ownedWeapons.includes(wep)) el.textContent = 'Owned';
+            else el.textContent = 'Not owned';
+        }
+    }
+
+    // Update magnet/shield status
+    const magnetEl = document.getElementById('magnetStatus');
+    if (magnetEl) magnetEl.textContent = shopData.magnet ? 'Owned' : 'Not owned';
+    const shieldEl = document.getElementById('startingShieldStatus');
+    if (shieldEl) shieldEl.textContent = shopData.startingShield ? 'Owned' : 'Not owned';
+
     // Update buy buttons
     document.querySelectorAll('.shop-buy-btn').forEach(btn => {
         const item = btn.dataset.item;
@@ -120,6 +153,31 @@ function updateShopUI() {
             btn.textContent = 'OWNED';
             btn.disabled = true;
             btn.classList.add('owned');
+        } else if (item === 'magnet' && shopData.magnet) {
+            btn.textContent = 'OWNED';
+            btn.disabled = true;
+            btn.classList.add('owned');
+        } else if (item === 'startingShield' && shopData.startingShield) {
+            btn.textContent = 'OWNED';
+            btn.disabled = true;
+            btn.classList.add('owned');
+        } else if (item.startsWith('weapon_')) {
+            const weaponName = item.replace('weapon_', '');
+            if (ownedWeapons.includes(weaponName) && (shopData.weapon || 'default') === weaponName) {
+                btn.textContent = 'EQUIPPED';
+                btn.disabled = true;
+                btn.classList.add('equipped');
+                btn.classList.remove('owned');
+            } else if (ownedWeapons.includes(weaponName)) {
+                btn.textContent = 'EQUIP';
+                btn.disabled = false;
+                btn.classList.add('owned');
+                btn.classList.remove('equipped');
+            } else {
+                btn.textContent = cost + ' gems';
+                btn.disabled = (player.gems || 0) < cost;
+                btn.classList.remove('owned', 'equipped');
+            }
         } else if (item.startsWith('skin_')) {
             const skinName = item.replace('skin_', '');
             if (shopData.skins[skinName] && shopData.activeSkin === skinName) {
@@ -436,19 +494,31 @@ function getStreakTier(streak) {
     return null;
 }
 
-// Starfield
-let stars = [];
+// Starfield (two parallax layers)
+let farStars = [];
+let nearStars = [];
 
 function initStars() {
-    stars = [];
-    const count = graphicsQuality === 'low' ? 30 : 80;
-    for (let i = 0; i < count; i++) {
-        stars.push({
+    farStars = [];
+    nearStars = [];
+    const farCount = graphicsQuality === 'low' ? 30 : 80;
+    const nearCount = graphicsQuality === 'low' ? 15 : 40;
+    for (let i = 0; i < farCount; i++) {
+        farStars.push({
             x: Math.random() * canvas.width,
             y: Math.random() * canvas.height,
-            speed: 0.5 + Math.random() * 1.5,
-            radius: 0.5 + Math.random() * 1.5,
-            brightness: 0.3 + Math.random() * 0.7
+            speed: 0.3 + Math.random() * 0.5,
+            radius: 0.5 + Math.random() * 1.0,
+            brightness: 0.3
+        });
+    }
+    for (let i = 0; i < nearCount; i++) {
+        nearStars.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            speed: 1.0 + Math.random() * 1.5,
+            radius: 1 + Math.random() * 2,
+            brightness: 0.7 + Math.random() * 0.3
         });
     }
 }
@@ -1028,7 +1098,8 @@ function createEnemy(type) {
         scoreValue: config.scoreValue,
         color: config.color,
         type: type,
-        maxHealth: config.health
+        maxHealth: config.health,
+        flashTimer: 0
     };
 
     if (type === 'FAST') {
@@ -1120,7 +1191,8 @@ const player = {
     color: '#4ecdc4',
     gems: 0,
     shieldTimer: 0,
-    rapidFireTimer: 0
+    rapidFireTimer: 0,
+    muzzleFlash: 0
 };
 
 let bullets = [];
@@ -1129,6 +1201,12 @@ let obstacles = [];
 let powerups = [];
 let particles = [];
 const keysPressed = {};
+
+// Screen flash (white flash for boss death / wave clear)
+let screenFlashAlpha = 0;
+
+// Slow-mo for wave clear fanfare
+let slowMoTimer = 0;
 
 // Screen shake system
 let screenShake = {
@@ -1145,13 +1223,15 @@ function triggerScreenShake(intensity, duration) {
 // Damage numbers
 let damageNumbers = [];
 
-function createDamageNumber(x, y, damage) {
+function createDamageNumber(x, y, damage, color, fontSize) {
     damageNumbers.push({
         x: x,
         y: y,
         damage: damage,
         life: 1,
-        vy: -2
+        vy: -2,
+        color: color || null,
+        fontSize: fontSize || 0
     });
 }
 
@@ -1174,6 +1254,8 @@ function resizeCanvas() {
 function updateHighScoreDisplay() {
     const highScore = parseInt(localStorage.getItem('highScore') || '0');
     startHighScoreEl.textContent = highScore;
+    const bestWaveEl = document.getElementById('startBestWave');
+    if (bestWaveEl) bestWaveEl.textContent = localStorage.getItem('bestWave') || '1';
 }
 
 function updateGameStats() {
@@ -1297,6 +1379,10 @@ function init() {
         const cost = parseInt(btn.dataset.cost);
         if (item.startsWith('skin_') && shopData.skins[item.replace('skin_', '')]) {
             equipSkin(item.replace('skin_', ''));
+        } else if (item.startsWith('weapon_') && (shopData.ownedWeapons || []).includes(item.replace('weapon_', ''))) {
+            shopData.weapon = item.replace('weapon_', '');
+            saveShopData();
+            updateShopUI();
         } else {
             buyShopItem(item, cost);
         }
@@ -1767,24 +1853,52 @@ function setupControls() {
 
 function shoot() {
     if (player.ammo <= 0 || !gameRunning || isPaused) return;
-    
-    player.ammo--;
+
+    const weapon = shopData.weapon || 'default';
+    const bulletColor = player.rapidFireTimer > 0 ? '#e67e22' : '#ff6b6b';
+    const bx = player.x + player.width / 2;
+    const by = player.y;
+
+    if (weapon === 'spread') {
+        if (player.ammo < 2) return; // Spread costs 2 ammo
+        player.ammo -= 2;
+        const angles = [-15, 0, 15];
+        for (const angle of angles) {
+            const rad = angle * Math.PI / 180;
+            bullets.push({
+                x: bx, y: by,
+                vx: Math.sin(rad) * 12,
+                vy: -Math.cos(rad) * 12,
+                radius: 5,
+                color: bulletColor
+            });
+        }
+    } else if (weapon === 'piercing') {
+        player.ammo--;
+        bullets.push({
+            x: bx, y: by,
+            vx: 0, vy: -12,
+            radius: 5,
+            color: '#00ffcc',
+            piercing: true,
+            hitEnemies: new Set()
+        });
+    } else {
+        player.ammo--;
+        bullets.push({
+            x: bx, y: by,
+            vx: 0, vy: -12,
+            radius: 5,
+            color: bulletColor
+        });
+    }
+
     updateUI();
-    
-    const bullet = {
-        x: player.x + player.width / 2,
-        y: player.y,
-        vx: 0,
-        vy: -12,
-        radius: 5,
-        color: player.rapidFireTimer > 0 ? '#e67e22' : '#ff6b6b'
-    };
-    bullets.push(bullet);
-    
-    createParticles(player.x + player.width / 2, player.y, 5, '#ffeb3b');
+    player.muzzleFlash = 0.05;
+    createParticles(bx, by, 5, '#ffeb3b');
     triggerScreenShake(8, 3);
     playSound('shoot');
-    
+
     // Add tutorial trigger
     checkTutorialTriggers('shoot');
 }
@@ -1814,10 +1928,13 @@ function startGame() {
 
     // Reset new systems
     gemsEarnedThisGame = 0;
-    player.shieldTimer = 0;
+    player.shieldTimer = shopData.startingShield ? 3 : 0;
     player.rapidFireTimer = 0;
+    player.muzzleFlash = 0;
     killStreak = 0;
     killStreakTimer = 0;
+    slowMoTimer = 0;
+    screenFlashAlpha = 0;
     
     // Reset wave system
     currentWave = 1;
@@ -1911,6 +2028,9 @@ function gameOver() {
     // Show wave reached
     const waveReachedEl = document.getElementById('waveReachedDisplay');
     if (waveReachedEl) waveReachedEl.textContent = currentWave;
+
+    // Save best wave
+    safeSetItem('bestWave', Math.max(currentWave, parseInt(localStorage.getItem('bestWave') || '1')).toString());
 
     // Check for revive
     if (shopData.revives > 0 && !usedReviveThisGame) {
@@ -2019,7 +2139,19 @@ function update(deltaTime, currentTime) {
     // Add at very start of update:
     if (isPaused) return;
     
-    const dt = normalizeDelta(deltaTime);
+    let dt = normalizeDelta(deltaTime);
+
+    // Slow-mo effect (wave clear fanfare)
+    if (slowMoTimer > 0) {
+        slowMoTimer -= deltaTime / 1000;
+        dt *= 0.3;
+    }
+
+    // Screen flash decay
+    if (screenFlashAlpha > 0) {
+        screenFlashAlpha -= 0.02 * dt;
+        if (screenFlashAlpha < 0) screenFlashAlpha = 0;
+    }
 
     // Shield timer countdown
     if (player.shieldTimer > 0) {
@@ -2033,6 +2165,9 @@ function update(deltaTime, currentTime) {
         if (player.rapidFireTimer < 0) player.rapidFireTimer = 0;
     }
 
+    // Muzzle flash timer
+    if (player.muzzleFlash > 0) player.muzzleFlash -= deltaTime / 1000;
+
     // Passive ammo regeneration (+1 every 2 seconds)
     ammoRegenAccumulator += deltaTime / 1000;
     if (ammoRegenAccumulator >= 2.0) {
@@ -2040,6 +2175,9 @@ function update(deltaTime, currentTime) {
         if (player.ammo < player.maxAmmo) {
             player.ammo = Math.min(player.maxAmmo, player.ammo + 1);
             updateUI();
+            // Flash ammo HUD
+            ammoEl.parentElement.classList.add('ammo-flash');
+            setTimeout(() => ammoEl.parentElement.classList.remove('ammo-flash'), 400);
         }
     }
 
@@ -2052,8 +2190,15 @@ function update(deltaTime, currentTime) {
         }
     }
 
-    // Update stars
-    for (const star of stars) {
+    // Update stars (both layers)
+    for (const star of farStars) {
+        star.y += star.speed * dt;
+        if (star.y > canvas.height) {
+            star.y = 0;
+            star.x = Math.random() * canvas.width;
+        }
+    }
+    for (const star of nearStars) {
         star.y += star.speed * dt;
         if (star.y > canvas.height) {
             star.y = 0;
@@ -2134,6 +2279,9 @@ function update(deltaTime, currentTime) {
             enemy.y += enemy.speed * dt;
         }
         
+        // Decrement hit flash timer
+        if (enemy.flashTimer > 0) enemy.flashTimer -= deltaTime / 1000;
+
         if (checkCollision(player, enemy)) {
             if (player.shieldTimer <= 0) player.health -= enemy.damage;
             createParticles(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, 20, enemy.color);
@@ -2143,13 +2291,21 @@ function update(deltaTime, currentTime) {
             playSound('hit');
             return false;
         }
-        
+
         for (let bi = bullets.length - 1; bi >= 0; bi--) {
             const bullet = bullets[bi];
+            // Skip enemies already hit by this piercing bullet
+            if (bullet.piercing && bullet.hitEnemies && bullet.hitEnemies.has(enemy)) continue;
             if (checkBulletCollision(bullet, enemy)) {
                 enemy.health--;
+                enemy.flashTimer = 0.1;
                 createParticles(bullet.x, bullet.y, 5, '#ffeb3b');
-                bullets.splice(bi, 1);
+                if (bullet.piercing) {
+                    if (!bullet.hitEnemies) bullet.hitEnemies = new Set();
+                    bullet.hitEnemies.add(enemy);
+                } else {
+                    bullets.splice(bi, 1);
+                }
                 createDamageNumber(enemy.x + enemy.width/2, enemy.y, 1);
                 triggerScreenShake(15, 5);
                 vibrate(30);
@@ -2162,6 +2318,10 @@ function update(deltaTime, currentTime) {
                     const mult = tier ? tier.multiplier : 1;
 
                     score += enemy.scoreValue * mult;
+                    // Combo multiplier floater
+                    if (mult > 1) {
+                        createDamageNumber(enemy.x + enemy.width / 2, enemy.y - 15, 'x' + mult, '#f39c12', 22);
+                    }
                     const gemReward = (ENEMY_GEM_VALUES[enemy.type] || 1) * mult;
                     player.gems += gemReward;
                     gemsEarnedThisGame += gemReward;
@@ -2176,13 +2336,34 @@ function update(deltaTime, currentTime) {
                     enemiesKilledInGame++;
                     enemiesRemaining--;
 
-                    // Check if boss
+                    // Per-type death effects
+                    const deathX = enemy.x + enemy.width / 2;
+                    const deathY = enemy.y + enemy.height / 2;
                     if (enemy.type === 'BOSS') {
                         boss = null;
                         hideBossHealthBar();
-                        createParticles(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, 80, enemy.color);
+                        createParticles(deathX, deathY, 80, enemy.color);
+                        screenFlashAlpha = 0.5;
+                    } else if (enemy.type === 'FAST') {
+                        // Fast scatter: fewer but faster particles
+                        for (let pi = 0; pi < (graphicsQuality === 'low' ? 8 : 15); pi++) {
+                            particles.push({
+                                x: deathX, y: deathY,
+                                vx: (Math.random() - 0.5) * 24,
+                                vy: (Math.random() - 0.5) * 24,
+                                radius: Math.random() * 4 + 2,
+                                color: enemy.color, life: 1,
+                                decay: 0.03 + Math.random() * 0.03
+                            });
+                        }
+                    } else if (enemy.type === 'TANK') {
+                        createParticles(deathX, deathY, 40, enemy.color);
+                        triggerScreenShake(35, 12);
+                    } else if (enemy.type === 'SHOOTER') {
+                        createParticles(deathX, deathY, 20, '#9b59b6');
+                        createParticles(deathX, deathY, 10, '#ffffff');
                     } else {
-                        createParticles(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, 25, enemy.color);
+                        createParticles(deathX, deathY, 25, enemy.color);
                     }
                     triggerScreenShake(25, 8);
                     vibrate(30);
@@ -2228,7 +2409,22 @@ function update(deltaTime, currentTime) {
     
     powerups = powerups.filter(powerup => {
         powerup.y += powerup.speed * dt;
-        
+
+        // Magnet: attract nearby powerups toward player
+        if (shopData.magnet) {
+            const px = powerup.x + powerup.width / 2;
+            const py = powerup.y + powerup.height / 2;
+            const playerCX = player.x + player.width / 2;
+            const playerCY = player.y + player.height / 2;
+            const dx = playerCX - px;
+            const dy = playerCY - py;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < 150 && dist > 0) {
+                powerup.x += (dx / dist) * 3 * dt;
+                powerup.y += (dy / dist) * 3 * dt;
+            }
+        }
+
         if (checkCollision(player, powerup)) {
             if (powerup.type === 'health') {
                 player.health = Math.min(player.maxHealth, player.health + 30);
@@ -2288,6 +2484,11 @@ function checkWaveComplete() {
         player.gems += WAVE_CLEAR_GEM_BONUS;
         gemsEarnedThisGame += WAVE_CLEAR_GEM_BONUS;
         player.ammo = Math.min(player.maxAmmo, player.ammo + 5);
+
+        // Wave clear fanfare
+        slowMoTimer = 0.5;
+        screenFlashAlpha = 0.3;
+        triggerScreenShake(15, 10);
 
         setTimeout(() => {
             currentWave++;
@@ -2359,8 +2560,14 @@ function draw() {
     ctx.fillStyle = '#0f0f1a';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Draw stars
-    for (const star of stars) {
+    // Draw stars (far layer first, then near)
+    for (const star of farStars) {
+        ctx.beginPath();
+        ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 255, 255, ${star.brightness})`;
+        ctx.fill();
+    }
+    for (const star of nearStars) {
         ctx.beginPath();
         ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(255, 255, 255, ${star.brightness})`;
@@ -2386,6 +2593,16 @@ function draw() {
     ctx.fillStyle = player.color;
     ctx.fillRect(player.x + player.width - 10, player.y + 5, 5, 5);
 
+    // Muzzle flash
+    if (player.muzzleFlash > 0) {
+        ctx.globalAlpha = player.muzzleFlash * 20;
+        ctx.fillStyle = '#ffeb3b';
+        ctx.beginPath();
+        ctx.arc(player.x + player.width - 7, player.y + 5, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+    }
+
     // Draw shield effect
     if (player.shieldTimer > 0) {
         ctx.strokeStyle = '#f1c40f';
@@ -2399,6 +2616,21 @@ function draw() {
     }
 
     bullets.forEach(bullet => {
+        // Draw bullet trail (skip on low graphics)
+        if (graphicsQuality !== 'low') {
+            const tailX = bullet.x - bullet.vx * 2;
+            const tailY = bullet.y - bullet.vy * 2;
+            const grad = ctx.createLinearGradient(tailX, tailY, bullet.x, bullet.y);
+            grad.addColorStop(0, 'transparent');
+            grad.addColorStop(1, bullet.color);
+            ctx.beginPath();
+            ctx.moveTo(tailX, tailY);
+            ctx.lineTo(bullet.x, bullet.y);
+            ctx.strokeStyle = grad;
+            ctx.lineWidth = 4;
+            ctx.stroke();
+        }
+        // Draw bullet head
         ctx.beginPath();
         ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2);
         ctx.fillStyle = bullet.color;
@@ -2451,6 +2683,14 @@ function draw() {
             ctx.fillStyle = '#2ecc71';
             ctx.fillRect(enemy.x + 10, enemy.y - 10, enemy.width * healthPercent, 5);
         }
+
+        // Draw hit flash overlay
+        if (enemy.flashTimer > 0) {
+            ctx.globalAlpha = Math.min(1, enemy.flashTimer * 10);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+            ctx.globalAlpha = 1;
+        }
     });
     
     obstacles.forEach(obstacle => {
@@ -2497,9 +2737,10 @@ function draw() {
         if (dn.life > 0) {
             ctx.save();
             ctx.globalAlpha = dn.life;
-            ctx.fillStyle = '#ffeb3b';
-            ctx.font = 'bold 16px Arial';
-            ctx.fillText('-' + dn.damage, dn.x, dn.y);
+            ctx.fillStyle = dn.color || '#ffeb3b';
+            ctx.font = 'bold ' + (dn.fontSize || 16) + 'px Arial';
+            const prefix = typeof dn.damage === 'string' ? '' : '-';
+            ctx.fillText(prefix + dn.damage, dn.x, dn.y);
             ctx.restore();
             return true;
         }
@@ -2520,6 +2761,27 @@ function draw() {
     }
 
     ctx.restore();  // End of shake translation
+
+    // Screen flash (white, for boss death / wave clear)
+    if (screenFlashAlpha > 0) {
+        ctx.globalAlpha = screenFlashAlpha;
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.globalAlpha = 1;
+    }
+
+    // Low-health vignette (red pulsing edges)
+    if (player.health < 30 && player.health > 0 && graphicsQuality !== 'low') {
+        const alpha = 0.2 + 0.1 * Math.sin(Date.now() * 0.005);
+        const grad = ctx.createRadialGradient(
+            canvas.width / 2, canvas.height / 2, canvas.height * 0.3,
+            canvas.width / 2, canvas.height / 2, canvas.height * 0.8
+        );
+        grad.addColorStop(0, 'transparent');
+        grad.addColorStop(1, `rgba(255, 0, 0, ${alpha})`);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
 }
 
 function gameLoop(currentTime) {

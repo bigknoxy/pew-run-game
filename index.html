@@ -132,7 +132,7 @@
                         </div>
                         <div class="htp-item">
                             <span class="htp-icon" style="background:#3498db">A</span>
-                            <span>Ammo (+10)</span>
+                            <span>Ammo (+15)</span>
                         </div>
                         <div class="htp-item">
                             <span class="htp-icon" style="background:#f1c40f">S</span>
@@ -278,6 +278,7 @@
             <h1>PEW RUN</h1>
            <p>Auto-shoot, drag to move left/right</p>
            <p>High Score: <span id="startHighScore">0</span></p>
+           <p>Best Wave: <span id="startBestWave">1</span></p>
             <button id="startBtn">START</button>
             <button id="shopBtn" class="shop-open-btn">SHOP</button>
             <button id="howToPlayBtn">HOW TO PLAY</button>
@@ -344,6 +345,34 @@
                         <div class="shop-name">Purple Ship</div>
                         <div class="shop-owned" id="skinPurpleStatus">Not owned</div>
                         <button class="shop-buy-btn" data-item="skin_purple" data-cost="300">300 gems</button>
+                    </div>
+                    <div class="shop-item" data-item="weapon_spread">
+                        <div class="shop-icon">⟨⟩</div>
+                        <div class="shop-name">Spread Shot</div>
+                        <div class="shop-desc">Fire 3 bullets in a fan</div>
+                        <div class="shop-owned" id="weaponSpreadStatus">Not owned</div>
+                        <button class="shop-buy-btn" data-item="weapon_spread" data-cost="400">400 gems</button>
+                    </div>
+                    <div class="shop-item" data-item="weapon_piercing">
+                        <div class="shop-icon">↟</div>
+                        <div class="shop-name">Piercing Shot</div>
+                        <div class="shop-desc">Bullets pass through enemies</div>
+                        <div class="shop-owned" id="weaponPiercingStatus">Not owned</div>
+                        <button class="shop-buy-btn" data-item="weapon_piercing" data-cost="600">600 gems</button>
+                    </div>
+                    <div class="shop-item" data-item="magnet">
+                        <div class="shop-icon">🧲</div>
+                        <div class="shop-name">Magnet</div>
+                        <div class="shop-desc">Attract nearby power-ups</div>
+                        <div class="shop-owned" id="magnetStatus">Not owned</div>
+                        <button class="shop-buy-btn" data-item="magnet" data-cost="350">350 gems</button>
+                    </div>
+                    <div class="shop-item" data-item="startingShield">
+                        <div class="shop-icon">🛡</div>
+                        <div class="shop-name">Auto Shield</div>
+                        <div class="shop-desc">Start with 3s shield</div>
+                        <div class="shop-owned" id="startingShieldStatus">Not owned</div>
+                        <button class="shop-buy-btn" data-item="startingShield" data-cost="250">250 gems</button>
                     </div>
                 </div>
                 <button id="closeShopBtn" class="close-btn">CLOSE</button>
