@@ -265,6 +265,29 @@
                 <span class="notification-text">Daily Reward Ready!</span>
             </div>
         </div>
+
+        <!-- Achievement Notification -->
+        <div id="achievementNotification" class="achievement-notification hidden">
+            <div class="achievement-notif-content">
+                <span class="achievement-notif-label">ACHIEVEMENT UNLOCKED!</span>
+                <span id="achievementIcon" class="achievement-notif-icon">🏆</span>
+                <span id="achievementName" class="achievement-notif-name">Achievement Name</span>
+                <span id="achievementDesc" class="achievement-notif-desc">Achievement description</span>
+            </div>
+        </div>
+
+        <!-- Achievements Panel -->
+        <div id="achievementsPanel" class="overlay hidden">
+            <div class="achievements-content">
+                <h2>ACHIEVEMENTS</h2>
+                <div class="achievements-progress">
+                    <span id="achievementsUnlocked">0</span> / <span id="achievementsTotal">12</span> Unlocked
+                </div>
+                <div id="achievementsList" class="achievements-list"></div>
+                <button id="closeAchievementsBtn" class="close-btn">CLOSE</button>
+            </div>
+        </div>
+
         <div id="playerHighlight" class="hidden">
             <div id="playerHighlightBox"></div>
         </div>
@@ -293,6 +316,7 @@
            <p>Best Wave: <span id="startBestWave">1</span></p>
             <button id="startBtn">START</button>
             <button id="shopBtn" class="shop-open-btn">SHOP</button>
+            <button id="achievementsBtn" class="achievements-open-btn">ACHIEVEMENTS</button>
             <button id="howToPlayBtn">HOW TO PLAY</button>
         </div>
         <div id="gameOverScreen" class="overlay hidden">
