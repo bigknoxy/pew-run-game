@@ -274,11 +274,11 @@ html, body {
 
 .bomb-btn {
     position: absolute;
-    top: calc(70px + env(safe-area-inset-top));
+    bottom: calc(20px + env(safe-area-inset-bottom));
     right: calc(10px + env(safe-area-inset-right));
-    width: 60px;
-    height: 60px;
-    font-size: 28px;
+    width: 70px;
+    height: 70px;
+    font-size: 32px;
     background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
     border: 3px solid #ff6b6b;
     border-radius: 50%;
