@@ -272,6 +272,52 @@ html, body {
     background: rgba(255, 255, 255, 0.4);
 }
 
+.bomb-btn {
+    position: absolute;
+    bottom: calc(20px + env(safe-area-inset-bottom));
+    right: calc(10px + env(safe-area-inset-right));
+    width: 70px;
+    height: 70px;
+    font-size: 32px;
+    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+    border: 3px solid #ff6b6b;
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 15px rgba(231, 76, 60, 0.5);
+    transition: transform 0.1s, box-shadow 0.1s;
+}
+
+.bomb-btn:active {
+    transform: scale(0.9);
+    box-shadow: 0 0 25px rgba(231, 76, 60, 0.8);
+}
+
+.bomb-btn.empty {
+    background: rgba(100, 100, 100, 0.5);
+    border-color: #666;
+    box-shadow: none;
+}
+
+.bomb-count {
+    position: absolute;
+    bottom: -5px;
+    right: -5px;
+    background: #f39c12;
+    color: #000;
+    font-size: 14px;
+    font-weight: bold;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 #pauseMenu {
     background: rgba(0, 0, 0, 0.9);
 }

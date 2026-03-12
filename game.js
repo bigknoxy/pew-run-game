@@ -50,9 +50,10 @@ function safeSetItem(key, value) {
 
 // Shop system
 const SKIN_COLORS = { default: '#4ecdc4', red: '#ff6b6b', gold: '#f39c12', purple: '#9b59b6' };
-let shopData = { revives: 0, ammoBoost: false, skins: { red: false, gold: false, purple: false }, activeSkin: 'default', weapon: 'default', ownedWeapons: ['default'], magnet: false, startingShield: false };
+let shopData = { revives: 0, bombs: 0, ammoBoost: false, skins: { red: false, gold: false, purple: false }, activeSkin: 'default', weapon: 'default', ownedWeapons: ['default'], magnet: false, startingShield: false };
 let usedReviveThisGame = false;
 let reviveTimerInterval = null;
+let bombsThisGame = 0;
 
 function loadShopData() {
     const saved = localStorage.getItem('shopData');
@@ -62,9 +63,9 @@ function loadShopData() {
             shopData = Object.assign(shopData, parsed);
         } catch(e) {}
     }
-    // Ensure new keys have defaults
     if (!shopData.weapon) shopData.weapon = 'default';
     if (!shopData.ownedWeapons) shopData.ownedWeapons = ['default'];
+    if (shopData.bombs === undefined) shopData.bombs = 0;
 }
 
 function saveShopData() {
@@ -76,6 +77,8 @@ function buyShopItem(item, cost) {
     player.gems -= cost;
     if (item === 'revive') {
         shopData.revives = (shopData.revives || 0) + 1;
+    } else if (item === 'bomb') {
+        shopData.bombs = (shopData.bombs || 0) + 1;
     } else if (item === 'ammoBoost') {
         shopData.ammoBoost = true;
     } else if (item.startsWith('skin_')) {
@@ -113,6 +116,9 @@ function updateShopUI() {
 
     const reviveCountEl = document.getElementById('reviveCount');
     if (reviveCountEl) reviveCountEl.textContent = (shopData.revives || 0) + ' owned';
+
+    const bombCountEl = document.getElementById('bombCount');
+    if (bombCountEl) bombCountEl.textContent = (shopData.bombs || 0) + ' owned';
 
     const ammoEl = document.getElementById('ammoBoostStatus');
     if (ammoEl) ammoEl.textContent = shopData.ammoBoost ? 'Owned' : 'Not owned';
@@ -253,6 +259,8 @@ function showGameOverScreen() {
     }
 
     if (pauseBtn) pauseBtn.classList.add('hidden');
+    const bombBtn = document.getElementById('bombBtn');
+    if (bombBtn) bombBtn.classList.add('hidden');
     const settingsBtn = document.getElementById('settingsBtn');
     if (settingsBtn) settingsBtn.classList.add('hidden');
     const settingsPanel = document.getElementById('settingsPanel');
@@ -631,7 +639,6 @@ function playSound(type) {
             break;
 
         case 'highScore':
-            // Rising 3-note chime
             const hsNotes = [523, 784, 1047];
             hsNotes.forEach((freq, i) => {
                 const o = audioCtx.createOscillator();
@@ -646,6 +653,28 @@ function playSound(type) {
                 o.stop(now + i * 0.15 + 0.3);
             });
             gain.gain.value = 0;
+            break;
+
+        case 'bomb':
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(150, now);
+            osc.frequency.exponentialRampToValueAtTime(30, now + 0.4);
+            gain.gain.setValueAtTime(0.25, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+            osc.start(now);
+            osc.stop(now + 0.4);
+            for (let i = 0; i < 3; i++) {
+                const noise = audioCtx.createOscillator();
+                const noiseGain = audioCtx.createGain();
+                noise.connect(noiseGain);
+                noiseGain.connect(audioCtx.destination);
+                noise.type = 'square';
+                noise.frequency.setValueAtTime(80 + i * 40, now + i * 0.05);
+                noiseGain.gain.setValueAtTime(0.15, now + i * 0.05);
+                noiseGain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.05 + 0.15);
+                noise.start(now + i * 0.05);
+                noise.stop(now + i * 0.05 + 0.15);
+            }
             break;
     }
 }
@@ -1302,8 +1331,15 @@ function quitToMenu() {
 function updatePauseButtonVisibility() {
     if (gameRunning) {
         pauseBtn.classList.remove('hidden');
+        const bombBtn = document.getElementById('bombBtn');
+        if (bombBtn) {
+            bombBtn.classList.remove('hidden');
+            updateBombUI();
+        }
     } else {
         pauseBtn.classList.add('hidden');
+        const bombBtn = document.getElementById('bombBtn');
+        if (bombBtn) bombBtn.classList.add('hidden');
     }
     updateSoundButtonVisibility();
 }
@@ -1393,6 +1429,17 @@ function init() {
         if (prompt) prompt.classList.add('hidden');
         showGameOverScreen();
     });
+
+    // Bomb button
+    const bombBtn = document.getElementById('bombBtn');
+    if (bombBtn) {
+        bombBtn.addEventListener('click', () => {
+            if (bombsThisGame > 0) {
+                playSound('click');
+                useBomb();
+            }
+        });
+    }
 
     document.addEventListener('click', initAudioOnFirstInteraction);
     document.addEventListener('touchstart', initAudioOnFirstInteraction);
@@ -1843,7 +1890,7 @@ function shoot() {
     const by = player.y;
 
     if (weapon === 'spread') {
-        if (player.ammo < 2) return; // Spread costs 2 ammo
+        if (player.ammo < 2) return;
         player.ammo -= 2;
         const angles = [-15, 0, 15];
         for (const angle of angles) {
@@ -1882,8 +1929,87 @@ function shoot() {
     triggerScreenShake(8, 3);
     playSound('shoot');
 
-    // Add tutorial trigger
     checkTutorialTriggers('shoot');
+}
+
+function useBomb() {
+    if (bombsThisGame <= 0 || !gameRunning || isPaused) return;
+
+    bombsThisGame--;
+    updateBombUI();
+
+    screenFlashAlpha = 0.8;
+    triggerScreenShake(60, 20);
+    playSound('bomb');
+    vibrate(100);
+
+    const cx = canvas.width / 2;
+    const cy = canvas.height / 2;
+    for (let i = 0; i < 100; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 5 + Math.random() * 15;
+        particles.push({
+            x: cx,
+            y: cy,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            radius: 3 + Math.random() * 6,
+            color: ['#ff6b6b', '#f39c12', '#ffeb3b', '#e74c3c'][Math.floor(Math.random() * 4)],
+            life: 1,
+            decay: 0.015 + Math.random() * 0.02
+        });
+    }
+
+    enemies = enemies.filter(enemy => {
+        if (enemy.type === 'BOSS') {
+            enemy.health -= 10;
+            enemy.flashTimer = 0.3;
+            updateBossHealthBar();
+            createParticles(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, 30, '#ffeb3b');
+            createDamageNumber(enemy.x + enemy.width / 2, enemy.y, 10, '#f39c12', 24);
+            return true;
+        } else if (enemy.type === 'TANK') {
+            enemy.health -= 2;
+            enemy.flashTimer = 0.3;
+            if (enemy.health <= 0) {
+                score += enemy.scoreValue;
+                enemiesKilledInGame++;
+                createParticles(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, 30, enemy.color);
+                return false;
+            }
+            createParticles(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, 15, '#ffeb3b');
+            createDamageNumber(enemy.x + enemy.width / 2, enemy.y, 2, '#f39c12');
+            return true;
+        } else {
+            score += enemy.scoreValue;
+            enemiesKilledInGame++;
+            const gemReward = ENEMY_GEM_VALUES[enemy.type] || 1;
+            player.gems += gemReward;
+            gemsEarnedThisGame += gemReward;
+            createParticles(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, 20, enemy.color);
+            return false;
+        }
+    });
+
+    enemiesRemaining = enemies.filter(e => e.type !== 'BOSS' || e.health > 0).length;
+    if (enemiesRemaining <= 0) {
+        checkWaveComplete();
+    }
+
+    updateUI();
+}
+
+function updateBombUI() {
+    const bombBtn = document.getElementById('bombBtn');
+    const bombCount = document.querySelector('.bomb-count');
+    if (!bombBtn || !bombCount) return;
+
+    bombCount.textContent = bombsThisGame;
+    if (bombsThisGame <= 0) {
+        bombBtn.classList.add('empty');
+    } else {
+        bombBtn.classList.remove('empty');
+    }
 }
 
 function startGame() {
@@ -1891,6 +2017,7 @@ function startGame() {
     score = 0;
     enemiesKilledInGame = 0;
     usedReviveThisGame = false;
+    bombsThisGame = 1 + (shopData.bombs || 0);
     player.health = player.maxHealth;
     player.ammo = shopData.ammoBoost ? player.maxAmmo + 10 : player.maxAmmo;
     player.color = SKIN_COLORS[shopData.activeSkin] || SKIN_COLORS.default;

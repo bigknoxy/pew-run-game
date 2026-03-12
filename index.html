@@ -64,6 +64,7 @@
             <span>TUTORIAL</span>
         </div>
         <!-- Add pause button (positioned in corner for easy access) -->
+        <button id="bombBtn" class="hidden bomb-btn" aria-label="Use Bomb">💣<span class="bomb-count">1</span></button>
         <button id="pauseBtn" class="hidden" aria-label="Pause">⏸️</button>
         <button id="soundBtn" class="hidden" aria-label="Toggle sound">🔊</button>
         <button id="musicBtn" class="hidden" aria-label="Toggle music">🎵</button>
@@ -143,6 +144,17 @@
                             <span>Rapid Fire (2x speed)</span>
                         </div>
                     </div>
+                </div>
+
+                <div class="htp-section">
+                    <h3>SPECIAL ABILITY</h3>
+                    <div class="htp-items">
+                        <div class="htp-item">
+                            <span class="htp-icon" style="background:#e74c3c">💣</span>
+                            <span>Bomb - Clears screen!</span>
+                        </div>
+                    </div>
+                    <p>Buy bombs in the shop. Tap the bomb button to use.</p>
                 </div>
 
                 <div class="htp-section">
@@ -373,6 +385,13 @@
                         <div class="shop-desc">Start with 3s shield</div>
                         <div class="shop-owned" id="startingShieldStatus">Not owned</div>
                         <button class="shop-buy-btn" data-item="startingShield" data-cost="250">250 gems</button>
+                    </div>
+                    <div class="shop-item" data-item="bomb">
+                        <div class="shop-icon">💣</div>
+                        <div class="shop-name">Bomb</div>
+                        <div class="shop-desc">Clear screen of enemies</div>
+                        <div class="shop-owned" id="bombCount">0 owned</div>
+                        <button class="shop-buy-btn" data-item="bomb" data-cost="150">150 gems</button>
                     </div>
                 </div>
                 <button id="closeShopBtn" class="close-btn">CLOSE</button>
