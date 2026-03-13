@@ -49,7 +49,134 @@ function safeSetItem(key, value) {
 }
 
 // Shop system
-const SKIN_COLORS = { default: '#4ecdc4', red: '#ff6b6b', gold: '#f39c12', purple: '#9b59b6' };
+const ACHIEVEMENTS = [
+    { id: 'first_blood', name: 'First Blood', desc: 'Kill 10 enemies', icon: '🎯', target: 10, stat: 'totalEnemiesKilled' },
+    { id: 'bounty_hunter', name: 'Bounty Hunter', desc: 'Kill 100 enemies', icon: '💀', target: 100, stat: 'totalEnemiesKilled' },
+    { id: 'exterminator', name: 'Exterminator', desc: 'Kill 1000 enemies', icon: '🔥', target: 1000, stat: 'totalEnemiesKilled' },
+    { id: 'wave_rider', name: 'Wave Rider', desc: 'Reach wave 5', icon: '🌊', target: 5, stat: 'highestWave' },
+    { id: 'wave_master', name: 'Wave Master', desc: 'Reach wave 10', icon: '🏆', target: 10, stat: 'highestWave' },
+    { id: 'wave_legend', name: 'Wave Legend', desc: 'Reach wave 25', icon: '👑', target: 25, stat: 'highestWave' },
+    { id: 'gem_collector', name: 'Gem Collector', desc: 'Collect 500 gems', icon: '💎', target: 500, stat: 'totalGemsEarned' },
+    { id: 'gem_hoarder', name: 'Gem Hoarder', desc: 'Collect 5000 gems', icon: '💰', target: 5000, stat: 'totalGemsEarned' },
+    { id: 'boss_slayer', name: 'Boss Slayer', desc: 'Defeat 10 bosses', icon: '👹', target: 10, stat: 'totalBossesKilled' },
+    { id: 'survivor', name: 'Survivor', desc: 'Play for 30 minutes', icon: '⏱️', target: 1800, stat: 'totalPlayTime' },
+    { id: 'bomber', name: 'Bomber', desc: 'Use 25 bombs', icon: '💣', target: 25, stat: 'totalBombsUsed' },
+    { id: 'unstoppable', name: 'Unstoppable', desc: 'Get 50 kill streak', icon: '⚡', target: 50, stat: 'highestKillStreak' }
+];
+
+let achievementData = { unlocked: [], stats: { totalEnemiesKilled: 0, highestWave: 0, totalGemsEarned: 0, totalBossesKilled: 0, totalPlayTime: 0, totalBombsUsed: 0, highestKillStreak: 0 } };
+let pendingAchievement = null;
+let sessionPlayTime = 0;
+let lastPlayTimeUpdate = 0;
+
+function loadAchievementData() {
+    const saved = localStorage.getItem('achievementData');
+    if (saved) {
+        try {
+            const parsed = JSON.parse(saved);
+            achievementData = { ...achievementData, ...parsed };
+            achievementData.stats = { ...achievementData.stats, ...parsed.stats };
+        } catch(e) {}
+    }
+}
+
+function saveAchievementData() {
+    safeSetItem('achievementData', JSON.stringify(achievementData));
+}
+
+function checkAchievements() {
+    for (const ach of ACHIEVEMENTS) {
+        if (achievementData.unlocked.includes(ach.id)) continue;
+        const current = achievementData.stats[ach.stat] || 0;
+        if (current >= ach.target) {
+            unlockAchievement(ach);
+        }
+    }
+}
+
+function unlockAchievement(ach) {
+    if (achievementData.unlocked.includes(ach.id)) return;
+    achievementData.unlocked.push(ach.id);
+    saveAchievementData();
+    pendingAchievement = ach;
+    showAchievementNotification(ach);
+    playSound('highScore');
+    createParticles(canvas.width / 2, canvas.height / 2, 50, '#f39c12');
+}
+
+function showAchievementNotification(ach) {
+    const notif = document.getElementById('achievementNotification');
+    const icon = document.getElementById('achievementIcon');
+    const name = document.getElementById('achievementName');
+    const desc = document.getElementById('achievementDesc');
+    if (!notif || !icon || !name || !desc) return;
+    icon.textContent = ach.icon;
+    name.textContent = ach.name;
+    desc.textContent = ach.desc;
+    notif.classList.remove('hidden');
+    notif.classList.add('show');
+    setTimeout(() => {
+        notif.classList.remove('show');
+        setTimeout(() => notif.classList.add('hidden'), 500);
+    }, 3000);
+}
+
+function updateAchievementStat(stat, value) {
+    if (stat === 'highestWave' || stat === 'highestKillStreak') {
+        achievementData.stats[stat] = Math.max(achievementData.stats[stat] || 0, value);
+    } else {
+        achievementData.stats[stat] = (achievementData.stats[stat] || 0) + value;
+    }
+    checkAchievements();
+}
+
+function updatePlayTime(currentTime) {
+    if (!gameRunning || isPaused) return;
+    if (lastPlayTimeUpdate === 0) {
+        lastPlayTimeUpdate = currentTime;
+        return;
+    }
+    const delta = (currentTime - lastPlayTimeUpdate) / 1000;
+    sessionPlayTime += delta;
+    achievementData.stats.totalPlayTime += delta;
+    lastPlayTimeUpdate = currentTime;
+    if (Math.floor(sessionPlayTime) % 30 === 0 && sessionPlayTime > 0) {
+        checkAchievements();
+    }
+}
+
+function updateAchievementsList() {
+    const list = document.getElementById('achievementsList');
+    const unlockedCount = document.getElementById('achievementsUnlocked');
+    const totalCount = document.getElementById('achievementsTotal');
+    
+    if (!list) return;
+    
+    if (unlockedCount) unlockedCount.textContent = achievementData.unlocked.length;
+    if (totalCount) totalCount.textContent = ACHIEVEMENTS.length;
+    
+    list.innerHTML = '';
+    
+    for (const ach of ACHIEVEMENTS) {
+        const isUnlocked = achievementData.unlocked.includes(ach.id);
+        const current = achievementData.stats[ach.stat] || 0;
+        const progress = Math.min(100, Math.floor((current / ach.target) * 100));
+        
+        const item = document.createElement('div');
+        item.className = `achievement-item ${isUnlocked ? 'unlocked' : 'locked'}`;
+        
+        item.innerHTML = `
+            <span class="achievement-item-icon">${ach.icon}</span>
+            <div class="achievement-item-info">
+                <div class="achievement-item-name">${ach.name}</div>
+                <div class="achievement-item-desc">${ach.desc}</div>
+                ${!isUnlocked ? `<div class="achievement-item-progress">${current} / ${ach.target} (${progress}%)</div>` : ''}
+            </div>
+        `;
+        
+        list.appendChild(item);
+    }
+}
 let shopData = { revives: 0, bombs: 0, ammoBoost: false, skins: { red: false, gold: false, purple: false }, activeSkin: 'default', weapon: 'default', ownedWeapons: ['default'], magnet: false, startingShield: false };
 let usedReviveThisGame = false;
 let reviveTimerInterval = null;
@@ -1182,6 +1309,9 @@ function checkBossDefeated() {
         playSound('bossDefeat');
         stopBossMusic();
         startBgMusic();
+        achievementData.stats.totalBossesKilled++;
+        saveAchievementData();
+        checkAchievements();
         checkWaveComplete();
     }
 }
@@ -1281,13 +1411,19 @@ function updateHighScoreDisplay() {
 }
 
 function updateGameStats() {
-    // Update total games played
     const totalGames = parseInt(localStorage.getItem('totalGames') || '0');
     safeSetItem('totalGames', (totalGames + 1).toString());
     
-    // Update total enemies killed
     const totalEnemiesKilled = parseInt(localStorage.getItem('totalEnemiesKilled') || '0');
     safeSetItem('totalEnemiesKilled', (totalEnemiesKilled + enemiesKilledInGame).toString());
+    
+    achievementData.stats.totalEnemiesKilled += enemiesKilledInGame;
+    achievementData.stats.totalGemsEarned += gemsEarnedThisGame;
+    if (currentWave > achievementData.stats.highestWave) {
+        achievementData.stats.highestWave = currentWave;
+    }
+    saveAchievementData();
+    checkAchievements();
 }
 
 // Add pause functions
@@ -1593,6 +1729,27 @@ function init() {
             claimDailyReward();
         }
     });
+
+    // Achievements panel
+    const achievementsBtn = document.getElementById('achievementsBtn');
+    const achievementsPanel = document.getElementById('achievementsPanel');
+    const closeAchievementsBtn = document.getElementById('closeAchievementsBtn');
+    
+    if (achievementsBtn) {
+        achievementsBtn.addEventListener('click', () => {
+            initAudio();
+            playSound('click');
+            achievementsPanel.classList.remove('hidden');
+            updateAchievementsList();
+        });
+    }
+    
+    if (closeAchievementsBtn) {
+        closeAchievementsBtn.addEventListener('click', () => {
+            playSound('click');
+            achievementsPanel.classList.add('hidden');
+        });
+    }
 
     // Add keyboard shortcuts
     document.addEventListener('keydown', (e) => {
@@ -1937,6 +2094,10 @@ function useBomb() {
 
     bombsThisGame--;
     updateBombUI();
+    
+    achievementData.stats.totalBombsUsed++;
+    saveAchievementData();
+    checkAchievements();
 
     screenFlashAlpha = 0.8;
     triggerScreenShake(60, 20);
@@ -2018,6 +2179,8 @@ function startGame() {
     enemiesKilledInGame = 0;
     usedReviveThisGame = false;
     bombsThisGame = 1 + (shopData.bombs || 0);
+    sessionPlayTime = 0;
+    lastPlayTimeUpdate = 0;
     player.health = player.maxHealth;
     player.ammo = shopData.ammoBoost ? player.maxAmmo + 10 : player.maxAmmo;
     player.color = SKIN_COLORS[shopData.activeSkin] || SKIN_COLORS.default;
@@ -2245,8 +2408,9 @@ function createParticles(x, y, count, color) {
 }
 
 function update(deltaTime, currentTime) {
-    // Add at very start of update:
     if (isPaused) return;
+    
+    updatePlayTime(currentTime);
     
     let dt = normalizeDelta(deltaTime);
 
@@ -2419,9 +2583,13 @@ function update(deltaTime, currentTime) {
                 vibrate(30);
                 playSound('hit');
                 if (enemy.health <= 0) {
-                    // Kill streak
                     killStreak++;
                     killStreakTimer = 0;
+                    if (killStreak > achievementData.stats.highestKillStreak) {
+                        achievementData.stats.highestKillStreak = killStreak;
+                        saveAchievementData();
+                        checkAchievements();
+                    }
                     const tier = getStreakTier(killStreak);
                     const mult = tier ? tier.multiplier : 1;
 
@@ -2921,6 +3089,7 @@ loadSettings();
 loadDailyRewards();
 loadPlayerGems();
 loadShopData();
+loadAchievementData();
 checkDailyRewardAvailability();
 
 // Wave Announcement Functions
