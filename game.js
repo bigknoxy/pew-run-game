@@ -177,6 +177,12 @@ function updateAchievementsList() {
         list.appendChild(item);
     }
 }
+const SKIN_COLORS = {
+    default: '#4ecdc4',
+    red: '#e74c3c',
+    gold: '#f39c12',
+    purple: '#9b59b6'
+};
 let shopData = { revives: 0, bombs: 0, ammoBoost: false, skins: { red: false, gold: false, purple: false }, activeSkin: 'default', weapon: 'default', ownedWeapons: ['default'], magnet: false, startingShield: false };
 let usedReviveThisGame = false;
 let reviveTimerInterval = null;
@@ -1301,10 +1307,12 @@ function checkBossDefeated() {
         // Boss defeated!
         score += boss.scoreValue;
         createParticles(boss.x + boss.width/2, boss.y + boss.height/2, 80, boss.color);
+        createConfettiBurst(boss.x + boss.width/2, boss.y + boss.height/2, 50);
         enemies = enemies.filter(e => e !== boss);
         boss = null;
         hideBossHealthBar();
         triggerScreenShake(50, 15);
+        triggerHitPause(0.15);
         vibrate(30);
         playSound('bossDefeat');
         stopBossMusic();
@@ -1360,6 +1368,9 @@ let screenFlashAlpha = 0;
 // Slow-mo for wave clear fanfare
 let slowMoTimer = 0;
 
+// Hit pause for major kills (boss, tank)
+let hitPauseTimer = 0;
+
 // Screen shake system
 let screenShake = {
     intensity: 0,
@@ -1370,6 +1381,10 @@ let screenShake = {
 function triggerScreenShake(intensity, duration) {
     screenShake.intensity = intensity;
     screenShake.duration = duration;
+}
+
+function triggerHitPause(duration) {
+    hitPauseTimer = duration;
 }
 
 // Damage numbers
@@ -2135,7 +2150,10 @@ function useBomb() {
             if (enemy.health <= 0) {
                 score += enemy.scoreValue;
                 enemiesKilledInGame++;
-                createParticles(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, 30, enemy.color);
+                createParticles(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, 40, enemy.color);
+                createRingBurst(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, '#ffeb3b', 16);
+                triggerHitPause(0.08);
+                checkKillMilestone();
                 return false;
             }
             createParticles(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, 15, '#ffeb3b');
@@ -2148,9 +2166,12 @@ function useBomb() {
             player.gems += gemReward;
             gemsEarnedThisGame += gemReward;
             createParticles(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, 20, enemy.color);
+            checkKillMilestone();
             return false;
         }
     });
+
+    checkBossDefeated();
 
     enemiesRemaining = enemies.filter(e => e.type !== 'BOSS' || e.health > 0).length;
     if (enemiesRemaining <= 0) {
@@ -2407,6 +2428,63 @@ function createParticles(x, y, count, color) {
     }
 }
 
+function createConfettiBurst(x, y, count) {
+    if (graphicsQuality === 'low') {
+        count = Math.floor(count * 0.5);
+    }
+    
+    const colors = ['#ff6b6b', '#f39c12', '#ffeb3b', '#4ecdc4', '#a29bfe', '#fd79a8', '#00b894', '#e17055'];
+    
+    for (let i = 0; i < count; i++) {
+        const angle = (Math.PI * 2 * i) / count + Math.random() * 0.3;
+        const speed = 8 + Math.random() * 12;
+        particles.push({
+            x: x,
+            y: y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed - 5,
+            radius: 4 + Math.random() * 4,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            life: 1.5,
+            decay: 0.015 + Math.random() * 0.01,
+            gravity: 0.3
+        });
+    }
+}
+
+function createRingBurst(x, y, color, count) {
+    if (graphicsQuality === 'low') {
+        count = Math.floor(count * 0.5);
+    }
+    
+    for (let i = 0; i < count; i++) {
+        const angle = (Math.PI * 2 * i) / count;
+        const speed = 6 + Math.random() * 3;
+        particles.push({
+            x: x,
+            y: y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            radius: 3 + Math.random() * 3,
+            color: color,
+            life: 0.8,
+            decay: 0.03 + Math.random() * 0.02
+        });
+    }
+}
+
+function checkKillMilestone() {
+    const milestones = [10, 25, 50, 100, 150, 200];
+    for (const milestone of milestones) {
+        if (enemiesKilledInGame === milestone) {
+            createConfettiBurst(player.x + player.width / 2, player.y, 30);
+            triggerScreenShake(20, 8);
+            screenFlashAlpha = 0.2;
+            return;
+        }
+    }
+}
+
 function update(deltaTime, currentTime) {
     if (isPaused) return;
     
@@ -2418,6 +2496,15 @@ function update(deltaTime, currentTime) {
     if (slowMoTimer > 0) {
         slowMoTimer -= deltaTime / 1000;
         dt *= 0.3;
+    }
+
+    // Hit pause effect (brief freeze on major kills)
+    if (hitPauseTimer > 0) {
+        hitPauseTimer -= deltaTime / 1000;
+        if (hitPauseTimer <= 0) {
+            hitPauseTimer = 0;
+        }
+        return; // Skip all updates during hit pause
     }
 
     // Screen flash decay
@@ -2611,6 +2698,7 @@ function update(deltaTime, currentTime) {
 
                     enemiesKilledInGame++;
                     enemiesRemaining--;
+                    checkKillMilestone();
 
                     // Per-type death effects
                     const deathX = enemy.x + enemy.width / 2;
@@ -2718,6 +2806,7 @@ function update(deltaTime, currentTime) {
                 player.rapidFireTimer = 5.0;
             }
             createParticles(powerup.x + powerup.width / 2, powerup.y + powerup.height / 2, 10, powerup.color);
+            createRingBurst(powerup.x + powerup.width / 2, powerup.y + powerup.height / 2, powerup.color, 12);
             
             // Add tutorial trigger for powerup collection
             checkTutorialTriggers('collect_powerup');
@@ -2734,7 +2823,7 @@ function update(deltaTime, currentTime) {
         particle.x += particle.vx * dt;
         particle.y += particle.vy * dt;
         particle.life -= (particle.decay || 0.02) * dt;
-        particle.vy += 0.2 * dt;
+        particle.vy += (particle.gravity || 0.2) * dt;
         return particle.life > 0;
     });
     
@@ -2771,6 +2860,7 @@ function checkWaveComplete() {
         slowMoTimer = 0.5;
         screenFlashAlpha = 0.3;
         triggerScreenShake(15, 10);
+        createConfettiBurst(canvas.width / 2, canvas.height / 2, 40);
 
         setTimeout(() => {
             currentWave++;
