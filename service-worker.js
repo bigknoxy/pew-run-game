@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pew-run-v1.1.0';
+const CACHE_NAME = 'pew-run-v1.2.0';
 const ASSETS = [
     './',
     './index.html',

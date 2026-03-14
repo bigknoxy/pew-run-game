@@ -1,7 +1,7 @@
 {
     "name": "Pew Run",
     "short_name": "Pew Run",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "description": "Fast-paced space shooter with waves, bosses, and epic battles!",
     "start_url": "./",
     "scope": "./",
